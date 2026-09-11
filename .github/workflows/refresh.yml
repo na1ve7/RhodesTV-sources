@@ -68,6 +68,12 @@ jobs:
           git diff --cached --quiet || git commit -m "refresh $(date -u +%Y-%m-%dT%H:%MZ)"
           git push
 
+      - name: Purge jsDelivr cache
+        run: |
+          # jsDelivr 对 @main 有最长 12h 缓存，主动 purge 让 CDN 立刻回源到新清单
+          curl -sS -m 30 "https://purge.jsdelivr.net/gh/na1ve7/RhodesTV-sources@main/dist/playable.m3u" || true
+          curl -sS -m 30 "https://purge.jsdelivr.net/gh/na1ve7/RhodesTV-sources@main/dist/report.json" || true
+
       - uses: actions/upload-artifact@v4
         with:
           name: dist
