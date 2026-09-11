@@ -9,6 +9,10 @@ on:
         description: 'skip push to gitee'
         required: false
         default: 'false'
+      channel:
+        description: '只重体检该频道(tvg-id/规范key，如 CCTV1、HUNANTV)；留空=全量刷新'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -31,11 +35,18 @@ jobs:
       - name: Fetch and test sources
         run: |
           set -e
-          python tools/test_sources.py --in sources.txt --out dist --workers 48 --timeout 8 --max-lines 3
-          python tools/gen_epg.py --m3u dist/playable.m3u --out dist --days 2 || echo "EPG failed, ignored"
+          CH="${{ github.event.inputs.channel }}"
+          if [ -n "$CH" ]; then
+            echo "== 单频道重体检: $CH =="
+            python tools/test_sources.py --in sources.txt --out dist --workers 48 --timeout 8 --max-lines 3 --recheck "$CH"
+          else
+            python tools/test_sources.py --in sources.txt --out dist --workers 48 --timeout 8 --max-lines 3
+            python tools/gen_epg.py --m3u dist/playable.m3u --out dist --days 2 || echo "EPG failed, ignored"
+          fi
           ls -lh dist/ || true
 
       - name: Gate check
+        if: ${{ github.event.inputs.channel == '' }}
         run: |
           python -c "import json,sys;d=json.load(open('dist/report.json',encoding='utf-8'));print('total',d['total'],'ok',d['ok']);sys.exit(0 if d['ok']>=20 else 1)"
 

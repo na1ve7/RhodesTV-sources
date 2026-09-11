@@ -1,0 +1,1778 @@
+{
+ "groups": [
+  "央视频道",
+  "卫视频道",
+  "地方频道",
+  "港澳台频道",
+  "影视综艺",
+  "体育频道",
+  "少儿动画",
+  "新闻财经",
+  "纪录人文",
+  "音乐戏曲",
+  "国际频道",
+  "其他频道"
+ ],
+ "channels": [
+  {
+   "key": "CCTV1",
+   "name": "CCTV-1 综合",
+   "group": "央视频道",
+   "chno": 1,
+   "must": true,
+   "alias": [
+    "CCTV1综合",
+    "CCTVONE",
+    "CCTV一套",
+    "CCTV1",
+    "中央1套"
+   ]
+  },
+  {
+   "key": "CCTV2",
+   "name": "CCTV-2 财经",
+   "group": "央视频道",
+   "chno": 2,
+   "must": true,
+   "alias": [
+    "CCTV2财经",
+    "CCTV2",
+    "中央2套"
+   ]
+  },
+  {
+   "key": "CCTV3",
+   "name": "CCTV-3 综艺",
+   "group": "央视频道",
+   "chno": 3,
+   "must": true,
+   "alias": [
+    "CCTV3综艺",
+    "CCTV3",
+    "中央3套"
+   ]
+  },
+  {
+   "key": "CCTV4",
+   "name": "CCTV-4 中文国际",
+   "group": "央视频道",
+   "chno": 4,
+   "must": true,
+   "alias": [
+    "CCTV4中文国际",
+    "CCTV4",
+    "中央4套"
+   ]
+  },
+  {
+   "key": "CCTV5",
+   "name": "CCTV-5 体育",
+   "group": "央视频道",
+   "chno": 5,
+   "must": true,
+   "alias": [
+    "CCTV5体育",
+    "CCTV5",
+    "中央5套"
+   ]
+  },
+  {
+   "key": "CCTV6",
+   "name": "CCTV-6 电影",
+   "group": "央视频道",
+   "chno": 6,
+   "must": true,
+   "alias": [
+    "CCTV6电影",
+    "CCTV6",
+    "中央6套"
+   ]
+  },
+  {
+   "key": "CCTV7",
+   "name": "CCTV-7 国防军事",
+   "group": "央视频道",
+   "chno": 7,
+   "must": true,
+   "alias": [
+    "CCTV7国防军事",
+    "CCTV7",
+    "中央7套"
+   ]
+  },
+  {
+   "key": "CCTV8",
+   "name": "CCTV-8 电视剧",
+   "group": "央视频道",
+   "chno": 8,
+   "must": true,
+   "alias": [
+    "CCTV8电视剧",
+    "CCTV8",
+    "中央8套"
+   ]
+  },
+  {
+   "key": "CCTV9",
+   "name": "CCTV-9 纪录",
+   "group": "央视频道",
+   "chno": 9,
+   "must": true,
+   "alias": [
+    "CCTV9纪录",
+    "CCTV9",
+    "中央9套"
+   ]
+  },
+  {
+   "key": "CCTV10",
+   "name": "CCTV-10 科教",
+   "group": "央视频道",
+   "chno": 10,
+   "must": true,
+   "alias": [
+    "CCTV10科教",
+    "CCTV10",
+    "中央10套"
+   ]
+  },
+  {
+   "key": "CCTV11",
+   "name": "CCTV-11 戏曲",
+   "group": "央视频道",
+   "chno": 11,
+   "must": true,
+   "alias": [
+    "CCTV11戏曲",
+    "CCTV11",
+    "中央11套"
+   ]
+  },
+  {
+   "key": "CCTV12",
+   "name": "CCTV-12 社会与法",
+   "group": "央视频道",
+   "chno": 12,
+   "must": true,
+   "alias": [
+    "CCTV12社会与法",
+    "CCTV12",
+    "中央12套"
+   ]
+  },
+  {
+   "key": "CCTV13",
+   "name": "CCTV-13 新闻",
+   "group": "央视频道",
+   "chno": 13,
+   "must": true,
+   "alias": [
+    "CCTV13新闻",
+    "CCTV13",
+    "中央13套"
+   ]
+  },
+  {
+   "key": "CCTV14",
+   "name": "CCTV-14 少儿",
+   "group": "央视频道",
+   "chno": 14,
+   "must": true,
+   "alias": [
+    "CCTV14少儿",
+    "CCTV14",
+    "中央14套"
+   ]
+  },
+  {
+   "key": "CCTV15",
+   "name": "CCTV-15 音乐",
+   "group": "央视频道",
+   "chno": 15,
+   "must": true,
+   "alias": [
+    "CCTV15音乐",
+    "CCTV15",
+    "中央15套"
+   ]
+  },
+  {
+   "key": "CCTV16",
+   "name": "CCTV-16 奥林匹克",
+   "group": "央视频道",
+   "chno": 16,
+   "must": true,
+   "alias": [
+    "CCTV16奥林匹克",
+    "CCTV16",
+    "中央16套"
+   ]
+  },
+  {
+   "key": "CCTV17",
+   "name": "CCTV-17 农业农村",
+   "group": "央视频道",
+   "chno": 17,
+   "must": true,
+   "alias": [
+    "CCTV17农业农村",
+    "CCTV17",
+    "中央17套"
+   ]
+  },
+  {
+   "key": "CCTV5PLUS",
+   "name": "CCTV-5+ 体育赛事",
+   "group": "央视频道",
+   "chno": 18,
+   "must": true,
+   "alias": [
+    "CCTV5+体育赛事",
+    "CCTV5PLUS",
+    "CCTV5+"
+   ]
+  },
+  {
+   "key": "CCTV4K",
+   "name": "CCTV-4K 超高清",
+   "group": "央视频道",
+   "chno": 19,
+   "must": true,
+   "alias": [
+    "CCTV超高清",
+    "CCTV4K",
+    "CCTV"
+   ]
+  },
+  {
+   "key": "CCTV8K",
+   "name": "CCTV-8K 超高清",
+   "group": "央视频道",
+   "chno": 20,
+   "must": true,
+   "alias": [
+    "CCTV超高清",
+    "CCTV8K",
+    "CCTV"
+   ]
+  },
+  {
+   "key": "CCTV4EU",
+   "name": "CCTV-4 欧洲",
+   "group": "央视频道",
+   "chno": 21,
+   "must": true,
+   "alias": [
+    "CCTV4EUROPE",
+    "CCTV4欧洲"
+   ]
+  },
+  {
+   "key": "CCTV4AM",
+   "name": "CCTV-4 美洲",
+   "group": "央视频道",
+   "chno": 22,
+   "must": true,
+   "alias": [
+    "CCTV4AMERICA",
+    "CCTV4美洲"
+   ]
+  },
+  {
+   "key": "CCTVBILLIARDS",
+   "name": "央视台球",
+   "group": "央视频道",
+   "chno": 30,
+   "must": true,
+   "alias": [
+    "BILLIARDS",
+    "CCTV台球",
+    "台球"
+   ]
+  },
+  {
+   "key": "CCTVGOLF",
+   "name": "央视高网",
+   "group": "央视频道",
+   "chno": 31,
+   "must": true,
+   "alias": [
+    "GOLFTENNIS",
+    "CCTV高网",
+    "高尔夫网球",
+    "高网"
+   ]
+  },
+  {
+   "key": "STORMFOOTBALL",
+   "name": "风云足球",
+   "group": "央视频道",
+   "chno": 32,
+   "must": true,
+   "alias": [
+    "STORMFOOTBALL",
+    "风云足球"
+   ]
+  },
+  {
+   "key": "STORMMUSIC",
+   "name": "风云音乐",
+   "group": "央视频道",
+   "chno": 33,
+   "must": true,
+   "alias": [
+    "STORMMUSIC",
+    "风云音乐"
+   ]
+  },
+  {
+   "key": "STORMTHEATER",
+   "name": "风云剧场",
+   "group": "央视频道",
+   "chno": 34,
+   "must": true,
+   "alias": [
+    "STORMTHEATER",
+    "风云剧场"
+   ]
+  },
+  {
+   "key": "FIRSTTHEATER",
+   "name": "第一剧场",
+   "group": "央视频道",
+   "chno": 35,
+   "must": true,
+   "alias": [
+    "FIRSTTHEATER",
+    "第一剧场"
+   ]
+  },
+  {
+   "key": "NOSTALGIA",
+   "name": "怀旧剧场",
+   "group": "央视频道",
+   "chno": 36,
+   "must": true,
+   "alias": [
+    "NOSTALGIA",
+    "怀旧剧场",
+    "怀旧"
+   ]
+  },
+  {
+   "key": "WORLDGEO",
+   "name": "世界地理",
+   "group": "央视频道",
+   "chno": 37,
+   "must": true,
+   "alias": [
+    "WORLDGEOGRAPHY",
+    "WORLDGEO",
+    "世界地理"
+   ]
+  },
+  {
+   "key": "WOMENFASHION",
+   "name": "女性时尚",
+   "group": "央视频道",
+   "chno": 38,
+   "must": true,
+   "alias": [
+    "WOMEN'SFASHION",
+    "WOMENSFASHION",
+    "女性时尚"
+   ]
+  },
+  {
+   "key": "CULTUREQ",
+   "name": "文化精品",
+   "group": "央视频道",
+   "chno": 39,
+   "must": true,
+   "alias": [
+    "CULTUREOFQUALITY",
+    "CCTV精品",
+    "文化精品"
+   ]
+  },
+  {
+   "key": "TVGUIDE",
+   "name": "电视指南",
+   "group": "央视频道",
+   "chno": 40,
+   "must": true,
+   "alias": [
+    "TVGUIDE",
+    "电视指南"
+   ]
+  },
+  {
+   "key": "OLDSTORY",
+   "name": "老故事",
+   "group": "央视频道",
+   "chno": 41,
+   "must": true,
+   "alias": [
+    "OLDSTORY",
+    "老故事"
+   ]
+  },
+  {
+   "key": "DISCOVERYCN",
+   "name": "发现之旅",
+   "group": "央视频道",
+   "chno": 42,
+   "must": true,
+   "alias": [
+    "DISCOVERYCN",
+    "发现之旅"
+   ]
+  },
+  {
+   "key": "MIDDLESCHOOL",
+   "name": "中学生",
+   "group": "央视频道",
+   "chno": 43,
+   "must": true,
+   "alias": [
+    "MIDDLESCHOOL",
+    "中学生"
+   ]
+  },
+  {
+   "key": "HEALTHCN",
+   "name": "卫生健康",
+   "group": "央视频道",
+   "chno": 44,
+   "must": true,
+   "alias": [
+    "HEALTHCHANNEL",
+    "CCTVHEALTH",
+    "卫生健康"
+   ]
+  },
+  {
+   "key": "WEAPON",
+   "name": "兵器科技",
+   "group": "央视频道",
+   "chno": 45,
+   "must": true,
+   "alias": [
+    "WEAPONANDTECHNOLOGY",
+    "WEAPON&TECHNOLOGY",
+    "WEAPON",
+    "兵器科技"
+   ]
+  },
+  {
+   "key": "CCTVOPERA",
+   "name": "央视戏曲",
+   "group": "央视频道",
+   "chno": 46,
+   "must": true,
+   "alias": [
+    "CCTVOPERA",
+    "CCTV戏曲",
+    "戏曲频道"
+   ]
+  },
+  {
+   "key": "CCTVSHOP",
+   "name": "中视购物",
+   "group": "央视频道",
+   "chno": 47,
+   "must": true,
+   "alias": [
+    "CHINATELEVISIONSHOPPING",
+    "CCTVSHOPPING",
+    "中视购物"
+   ]
+  },
+  {
+   "key": "CCTVENT",
+   "name": "央视娱乐",
+   "group": "央视频道",
+   "chno": 48,
+   "must": true,
+   "alias": [
+    "CCTVENTERTAINMENT",
+    "CCTV娱乐"
+   ]
+  },
+  {
+   "key": "CCTVGUIDETV",
+   "name": "央视精品",
+   "group": "央视频道",
+   "chno": 49,
+   "must": true,
+   "alias": [
+    "CCTV精品"
+   ]
+  },
+  {
+   "key": "CCTVPRO",
+   "name": "央视证券资讯",
+   "group": "央视频道",
+   "chno": 50,
+   "must": true,
+   "alias": [
+    "CCTV证券资讯",
+    "CCTVPRO",
+    "证券资讯"
+   ]
+  },
+  {
+   "key": "BJTV",
+   "name": "北京卫视",
+   "group": "卫视频道",
+   "chno": 101,
+   "must": true,
+   "alias": [
+    "BRTV北京",
+    "BTV北京",
+    "北京卫视"
+   ]
+  },
+  {
+   "key": "DFTV",
+   "name": "东方卫视",
+   "group": "卫视频道",
+   "chno": 102,
+   "must": true,
+   "alias": [
+    "上海东方卫视",
+    "东方卫视"
+   ]
+  },
+  {
+   "key": "JSTV",
+   "name": "江苏卫视",
+   "group": "卫视频道",
+   "chno": 103,
+   "must": true,
+   "alias": [
+    "江苏卫视"
+   ]
+  },
+  {
+   "key": "ZJTV",
+   "name": "浙江卫视",
+   "group": "卫视频道",
+   "chno": 104,
+   "must": true,
+   "alias": [
+    "浙江卫视"
+   ]
+  },
+  {
+   "key": "HNTV",
+   "name": "湖南卫视",
+   "group": "卫视频道",
+   "chno": 105,
+   "must": true,
+   "alias": [
+    "湖南卫视"
+   ]
+  },
+  {
+   "key": "GDTV",
+   "name": "广东卫视",
+   "group": "卫视频道",
+   "chno": 106,
+   "must": true,
+   "alias": [
+    "广东卫视"
+   ]
+  },
+  {
+   "key": "SZTV",
+   "name": "深圳卫视",
+   "group": "卫视频道",
+   "chno": 107,
+   "must": true,
+   "alias": [
+    "深圳卫视"
+   ]
+  },
+  {
+   "key": "SDTV",
+   "name": "山东卫视",
+   "group": "卫视频道",
+   "chno": 108,
+   "must": true,
+   "alias": [
+    "山东卫视"
+   ]
+  },
+  {
+   "key": "AHTV",
+   "name": "安徽卫视",
+   "group": "卫视频道",
+   "chno": 109,
+   "must": true,
+   "alias": [
+    "安徽卫视"
+   ]
+  },
+  {
+   "key": "TJTV",
+   "name": "天津卫视",
+   "group": "卫视频道",
+   "chno": 110,
+   "must": true,
+   "alias": [
+    "天津卫视"
+   ]
+  },
+  {
+   "key": "CQTV",
+   "name": "重庆卫视",
+   "group": "卫视频道",
+   "chno": 111,
+   "must": true,
+   "alias": [
+    "重庆卫视"
+   ]
+  },
+  {
+   "key": "SCTV",
+   "name": "四川卫视",
+   "group": "卫视频道",
+   "chno": 112,
+   "must": true,
+   "alias": [
+    "四川卫视"
+   ]
+  },
+  {
+   "key": "HUBTV",
+   "name": "湖北卫视",
+   "group": "卫视频道",
+   "chno": 113,
+   "must": true,
+   "alias": [
+    "湖北卫视"
+   ]
+  },
+  {
+   "key": "HNTV2",
+   "name": "河南卫视",
+   "group": "卫视频道",
+   "chno": 114,
+   "must": true,
+   "alias": [
+    "河南卫视"
+   ]
+  },
+  {
+   "key": "HEBTV",
+   "name": "河北卫视",
+   "group": "卫视频道",
+   "chno": 115,
+   "must": true,
+   "alias": [
+    "河北卫视"
+   ]
+  },
+  {
+   "key": "JXTV",
+   "name": "江西卫视",
+   "group": "卫视频道",
+   "chno": 116,
+   "must": true,
+   "alias": [
+    "江西卫视"
+   ]
+  },
+  {
+   "key": "FJTV",
+   "name": "东南卫视",
+   "group": "卫视频道",
+   "chno": 117,
+   "must": true,
+   "alias": [
+    "福建东南卫视",
+    "东南卫视"
+   ]
+  },
+  {
+   "key": "LNTV",
+   "name": "辽宁卫视",
+   "group": "卫视频道",
+   "chno": 118,
+   "must": true,
+   "alias": [
+    "辽宁卫视"
+   ]
+  },
+  {
+   "key": "HLJTV",
+   "name": "黑龙江卫视",
+   "group": "卫视频道",
+   "chno": 119,
+   "must": true,
+   "alias": [
+    "黑龙江卫视",
+    "黑龙卫视",
+    "黑龙江台"
+   ]
+  },
+  {
+   "key": "JLTV",
+   "name": "吉林卫视",
+   "group": "卫视频道",
+   "chno": 120,
+   "must": true,
+   "alias": [
+    "吉林卫视"
+   ]
+  },
+  {
+   "key": "SXTV",
+   "name": "山西卫视",
+   "group": "卫视频道",
+   "chno": 121,
+   "must": true,
+   "alias": [
+    "山西卫视"
+   ]
+  },
+  {
+   "key": "SHTV",
+   "name": "陕西卫视",
+   "group": "卫视频道",
+   "chno": 122,
+   "must": true,
+   "alias": [
+    "陕西卫视"
+   ]
+  },
+  {
+   "key": "GXTV",
+   "name": "广西卫视",
+   "group": "卫视频道",
+   "chno": 123,
+   "must": true,
+   "alias": [
+    "广西卫视"
+   ]
+  },
+  {
+   "key": "YNTV",
+   "name": "云南卫视",
+   "group": "卫视频道",
+   "chno": 124,
+   "must": true,
+   "alias": [
+    "云南卫视"
+   ]
+  },
+  {
+   "key": "GZTV",
+   "name": "贵州卫视",
+   "group": "卫视频道",
+   "chno": 125,
+   "must": true,
+   "alias": [
+    "贵州卫视"
+   ]
+  },
+  {
+   "key": "GSTV",
+   "name": "甘肃卫视",
+   "group": "卫视频道",
+   "chno": 126,
+   "must": true,
+   "alias": [
+    "甘肃卫视"
+   ]
+  },
+  {
+   "key": "QHTV",
+   "name": "青海卫视",
+   "group": "卫视频道",
+   "chno": 127,
+   "must": true,
+   "alias": [
+    "青海卫视"
+   ]
+  },
+  {
+   "key": "NXTV",
+   "name": "宁夏卫视",
+   "group": "卫视频道",
+   "chno": 128,
+   "must": true,
+   "alias": [
+    "宁夏卫视"
+   ]
+  },
+  {
+   "key": "XJTV",
+   "name": "新疆卫视",
+   "group": "卫视频道",
+   "chno": 129,
+   "must": true,
+   "alias": [
+    "新疆卫视"
+   ]
+  },
+  {
+   "key": "XZTV",
+   "name": "西藏卫视",
+   "group": "卫视频道",
+   "chno": 130,
+   "must": true,
+   "alias": [
+    "西藏卫视"
+   ]
+  },
+  {
+   "key": "NMGTV",
+   "name": "内蒙古卫视",
+   "group": "卫视频道",
+   "chno": 131,
+   "must": true,
+   "alias": [
+    "内蒙古卫视"
+   ]
+  },
+  {
+   "key": "HITV",
+   "name": "海南卫视",
+   "group": "卫视频道",
+   "chno": 132,
+   "must": true,
+   "alias": [
+    "旅游卫视",
+    "海南卫视"
+   ]
+  },
+  {
+   "key": "XMTV",
+   "name": "厦门卫视",
+   "group": "卫视频道",
+   "chno": 133,
+   "must": true,
+   "alias": [
+    "厦门卫视"
+   ]
+  },
+  {
+   "key": "YBTV",
+   "name": "延边卫视",
+   "group": "卫视频道",
+   "chno": 134,
+   "must": true,
+   "alias": [
+    "延边卫视"
+   ]
+  },
+  {
+   "key": "BTTV",
+   "name": "兵团卫视",
+   "group": "卫视频道",
+   "chno": 135,
+   "must": true,
+   "alias": [
+    "兵团卫视"
+   ]
+  },
+  {
+   "key": "KBTV",
+   "name": "康巴卫视",
+   "group": "卫视频道",
+   "chno": 136,
+   "must": true,
+   "alias": [
+    "康巴卫视"
+   ]
+  },
+  {
+   "key": "SSTV",
+   "name": "三沙卫视",
+   "group": "卫视频道",
+   "chno": 137,
+   "must": true,
+   "alias": [
+    "三沙卫视"
+   ]
+  },
+  {
+   "key": "NFTV",
+   "name": "南方卫视",
+   "group": "卫视频道",
+   "chno": 138,
+   "must": true,
+   "alias": [
+    "大湾区卫视",
+    "南方卫视"
+   ]
+  },
+  {
+   "key": "HAIXIA",
+   "name": "海峡卫视",
+   "group": "卫视频道",
+   "chno": 139,
+   "must": true,
+   "alias": [
+    "海峡卫视"
+   ]
+  },
+  {
+   "key": "YNNTV",
+   "name": "云南澜湄",
+   "group": "卫视频道",
+   "chno": 140,
+   "must": true,
+   "alias": [
+    "云南澜湄",
+    "澜湄国际"
+   ]
+  },
+  {
+   "key": "SDTV2",
+   "name": "山东教育卫视",
+   "group": "卫视频道",
+   "chno": 141,
+   "must": true,
+   "alias": [
+    "山东教育卫视",
+    "山东教育"
+   ]
+  },
+  {
+   "key": "CETV1",
+   "name": "中国教育1台",
+   "group": "卫视频道",
+   "chno": 142,
+   "must": true,
+   "alias": [
+    "中国教育电视台1",
+    "中国教育1台",
+    "CETV1",
+    "中国教育1"
+   ]
+  },
+  {
+   "key": "CETV2",
+   "name": "中国教育2台",
+   "group": "卫视频道",
+   "chno": 143,
+   "must": true,
+   "alias": [
+    "中国教育2台",
+    "中国教育2",
+    "CETV2"
+   ]
+  },
+  {
+   "key": "CETV4",
+   "name": "中国教育4台",
+   "group": "卫视频道",
+   "chno": 144,
+   "must": true,
+   "alias": [
+    "中国教育4台",
+    "CETV4",
+    "中国教育4"
+   ]
+  },
+  {
+   "key": "GDTVSPORT",
+   "name": "广东体育",
+   "group": "体育频道",
+   "chno": 201,
+   "must": true,
+   "alias": [
+    "GDTVSPORT",
+    "广东体育"
+   ]
+  },
+  {
+   "key": "WUXINGSPORT",
+   "name": "五星体育",
+   "group": "体育频道",
+   "chno": 202,
+   "must": true,
+   "alias": [
+    "WUXING",
+    "五星体育"
+   ]
+  },
+  {
+   "key": "JJSPORT",
+   "name": "劲爆体育",
+   "group": "体育频道",
+   "chno": 203,
+   "must": true,
+   "alias": [
+    "JJSPORT",
+    "劲爆体育"
+   ]
+  },
+  {
+   "key": "VLSPORT",
+   "name": "纬来体育",
+   "group": "体育频道",
+   "chno": 204,
+   "must": true,
+   "alias": [
+    "VIDEOLANDSPORT",
+    "纬来体育"
+   ]
+  },
+  {
+   "key": "MACAUSPORT",
+   "name": "澳门体育",
+   "group": "体育频道",
+   "chno": 205,
+   "must": true,
+   "alias": [
+    "澳门体育"
+   ]
+  },
+  {
+   "key": "JINGCAI",
+   "name": "睛彩篮球",
+   "group": "体育频道",
+   "chno": 206,
+   "must": true,
+   "alias": [
+    "睛彩篮球",
+    "睛彩"
+   ]
+  },
+  {
+   "key": "FOOTBALL",
+   "name": "足球频道",
+   "group": "体育频道",
+   "chno": 207,
+   "must": true,
+   "alias": [
+    "FOOTBALLCHANNEL",
+    "足球频道"
+   ]
+  },
+  {
+   "key": "TIANYUAN",
+   "name": "天元围棋",
+   "group": "体育频道",
+   "chno": 208,
+   "must": true,
+   "alias": [
+    "围棋频道",
+    "天元围棋"
+   ]
+  },
+  {
+   "key": "FISHING",
+   "name": "快乐垂钓",
+   "group": "体育频道",
+   "chno": 209,
+   "must": true,
+   "alias": [
+    "垂钓频道",
+    "快乐垂钓"
+   ]
+  },
+  {
+   "key": "BRTVSPORT",
+   "name": "北京体育休闲",
+   "group": "体育频道",
+   "chno": 210,
+   "must": true,
+   "alias": [
+    "BRTV体育",
+    "北京体育休闲",
+    "北京体育",
+    "体育休闲"
+   ]
+  },
+  {
+   "key": "TJSPORT",
+   "name": "天津体育",
+   "group": "体育频道",
+   "chno": 211,
+   "must": true,
+   "alias": [
+    "天津体育"
+   ]
+  },
+  {
+   "key": "SDSPORT",
+   "name": "山东体育",
+   "group": "体育频道",
+   "chno": 212,
+   "must": true,
+   "alias": [
+    "山东体育"
+   ]
+  },
+  {
+   "key": "JSSPORT",
+   "name": "江苏体育休闲",
+   "group": "体育频道",
+   "chno": 213,
+   "must": true,
+   "alias": [
+    "江苏体育休闲",
+    "江苏体育"
+   ]
+  },
+  {
+   "key": "HUBSPORT",
+   "name": "湖北体育",
+   "group": "体育频道",
+   "chno": 214,
+   "must": true,
+   "alias": [
+    "楚风体育",
+    "湖北体育"
+   ]
+  },
+  {
+   "key": "LNSPORT",
+   "name": "辽宁体育",
+   "group": "体育频道",
+   "chno": 215,
+   "must": true,
+   "alias": [
+    "辽宁体育"
+   ]
+  },
+  {
+   "key": "SZSPORT",
+   "name": "深圳体育",
+   "group": "体育频道",
+   "chno": 216,
+   "must": true,
+   "alias": [
+    "深圳体育"
+   ]
+  },
+  {
+   "key": "GZSPORT",
+   "name": "广州竞赛",
+   "group": "体育频道",
+   "chno": 217,
+   "must": true,
+   "alias": [
+    "广州竞赛",
+    "竞赛频道"
+   ]
+  },
+  {
+   "key": "SUPERSPORT",
+   "name": "超级体育",
+   "group": "体育频道",
+   "chno": 218,
+   "must": true,
+   "alias": [
+    "SUPERSPORT",
+    "NEWTV超级体育",
+    "超级体育"
+   ]
+  },
+  {
+   "key": "JPSPORT",
+   "name": "精品体育",
+   "group": "体育频道",
+   "chno": 219,
+   "must": true,
+   "alias": [
+    "JINGPINSPORT",
+    "精品体育"
+   ]
+  },
+  {
+   "key": "WUSHU",
+   "name": "武术世界",
+   "group": "体育频道",
+   "chno": 220,
+   "must": true,
+   "alias": [
+    "武术频道",
+    "武术世界"
+   ]
+  },
+  {
+   "key": "TRACESPORTS",
+   "name": "Trace Sports",
+   "group": "体育频道",
+   "chno": 221,
+   "must": true,
+   "alias": [
+    "TRACESPORTS"
+   ]
+  },
+  {
+   "key": "DAZN1",
+   "name": "DAZN 体育1",
+   "group": "体育频道",
+   "chno": 222,
+   "must": true,
+   "alias": [
+    "DAZN体育1",
+    "DAZN1"
+   ]
+  },
+  {
+   "key": "DAZN2",
+   "name": "DAZN 体育2",
+   "group": "体育频道",
+   "chno": 223,
+   "must": true,
+   "alias": [
+    "DAZN体育2",
+    "DAZN2"
+   ]
+  },
+  {
+   "key": "ELEVEN1",
+   "name": "ELEVEN 体育1",
+   "group": "体育频道",
+   "chno": 224,
+   "must": true,
+   "alias": [
+    "ELEVEN体育1",
+    "ELEVEN1"
+   ]
+  },
+  {
+   "key": "ELEVEN2",
+   "name": "ELEVEN 体育2",
+   "group": "体育频道",
+   "chno": 225,
+   "must": true,
+   "alias": [
+    "ELEVEN体育2",
+    "ELEVEN2"
+   ]
+  },
+  {
+   "key": "ELEVEN3",
+   "name": "ELEVEN 体育3",
+   "group": "体育频道",
+   "chno": 226,
+   "must": true,
+   "alias": [
+    "ELEVEN体育3",
+    "ELEVEN3"
+   ]
+  },
+  {
+   "key": "IHOTSPORT",
+   "name": "爱体育",
+   "group": "体育频道",
+   "chno": 227,
+   "must": true,
+   "alias": [
+    "IHOT",
+    "爱体育"
+   ]
+  },
+  {
+   "key": "FENGHUANGSPORT",
+   "name": "凤凰体育",
+   "group": "体育频道",
+   "chno": 228,
+   "must": true,
+   "alias": [
+    "凤凰体育"
+   ]
+  },
+  {
+   "key": "MANUTD",
+   "name": "曼联官方频道",
+   "group": "体育频道",
+   "chno": 229,
+   "must": true,
+   "alias": [
+    "曼联官方频道",
+    "MUTV",
+    "曼联"
+   ]
+  },
+  {
+   "key": "LALIGA",
+   "name": "西甲频道",
+   "group": "体育频道",
+   "chno": 230,
+   "must": true,
+   "alias": [
+    "LALIGA",
+    "西甲频道",
+    "西甲"
+   ]
+  },
+  {
+   "key": "MLFOOTBALL",
+   "name": "魅力足球",
+   "group": "体育频道",
+   "chno": 231,
+   "must": true,
+   "alias": [
+    "魅力足球"
+   ]
+  },
+  {
+   "key": "XFPY",
+   "name": "先锋乒羽",
+   "group": "体育频道",
+   "chno": 232,
+   "must": true,
+   "alias": [
+    "先锋乒羽"
+   ]
+  },
+  {
+   "key": "GOLFCH",
+   "name": "高尔夫网球",
+   "group": "体育频道",
+   "chno": 233,
+   "must": true,
+   "alias": [
+    "高尔夫网球",
+    "高尔夫频道"
+   ]
+  },
+  {
+   "key": "CSL",
+   "name": "足球赛事",
+   "group": "体育频道",
+   "chno": 234,
+   "must": true,
+   "alias": [
+    "足球赛事"
+   ]
+  },
+  {
+   "key": "CARTOON",
+   "name": "金鹰卡通",
+   "group": "少儿动画",
+   "chno": 301,
+   "must": true,
+   "alias": [
+    "金鹰卡通"
+   ]
+  },
+  {
+   "key": "KAKU",
+   "name": "卡酷少儿",
+   "group": "少儿动画",
+   "chno": 302,
+   "must": true,
+   "alias": [
+    "卡酷少儿",
+    "卡酷"
+   ]
+  },
+  {
+   "key": "TOONMAX",
+   "name": "哈哈炫动",
+   "group": "少儿动画",
+   "chno": 303,
+   "must": true,
+   "alias": [
+    "炫动卡通",
+    "哈哈炫动"
+   ]
+  },
+  {
+   "key": "YOUYOU",
+   "name": "优优宝贝",
+   "group": "少儿动画",
+   "chno": 304,
+   "must": true,
+   "alias": [
+    "优优宝贝"
+   ]
+  },
+  {
+   "key": "BBTV",
+   "name": "嘉佳卡通",
+   "group": "少儿动画",
+   "chno": 305,
+   "must": true,
+   "alias": [
+    "嘉佳卡通"
+   ]
+  },
+  {
+   "key": "ANIMAX",
+   "name": "优漫卡通",
+   "group": "少儿动画",
+   "chno": 306,
+   "must": true,
+   "alias": [
+    "优漫卡通"
+   ]
+  },
+  {
+   "key": "DOCSH",
+   "name": "上海纪实",
+   "group": "纪录人文",
+   "chno": 310,
+   "must": true,
+   "alias": [
+    "上海纪实",
+    "纪实人文"
+   ]
+  },
+  {
+   "key": "DOCBJ",
+   "name": "北京纪实科教",
+   "group": "纪录人文",
+   "chno": 311,
+   "must": true,
+   "alias": [
+    "北京纪实科教",
+    "纪实科教",
+    "北京纪实"
+   ]
+  },
+  {
+   "key": "DOCJY",
+   "name": "金鹰纪实",
+   "group": "纪录人文",
+   "chno": 312,
+   "must": true,
+   "alias": [
+    "金鹰纪实"
+   ]
+  },
+  {
+   "key": "DOCCHN",
+   "name": "中国纪录",
+   "group": "纪录人文",
+   "chno": 313,
+   "must": true,
+   "alias": [
+    "中国纪录片",
+    "中国纪录"
+   ]
+  },
+  {
+   "key": "DOCZJ",
+   "name": "之江纪录",
+   "group": "纪录人文",
+   "chno": 314,
+   "must": true,
+   "alias": [
+    "之江纪录"
+   ]
+  },
+  {
+   "key": "FINANCE1",
+   "name": "第一财经",
+   "group": "新闻财经",
+   "chno": 320,
+   "must": true,
+   "alias": [
+    "第一财经"
+   ]
+  },
+  {
+   "key": "DFFIN",
+   "name": "东方财经",
+   "group": "新闻财经",
+   "chno": 321,
+   "must": true,
+   "alias": [
+    "东方财经"
+   ]
+  },
+  {
+   "key": "FHFIN",
+   "name": "凤凰财经",
+   "group": "新闻财经",
+   "chno": 322,
+   "must": true,
+   "alias": [
+    "凤凰财经"
+   ]
+  },
+  {
+   "key": "FHINFO",
+   "name": "凤凰资讯",
+   "group": "新闻财经",
+   "chno": 323,
+   "must": true,
+   "alias": [
+    "凤凰卫视资讯",
+    "凤凰资讯"
+   ]
+  },
+  {
+   "key": "BTVFIN",
+   "name": "BRTV财经",
+   "group": "新闻财经",
+   "chno": 324,
+   "must": true,
+   "alias": [
+    "BRTV财经",
+    "BTV财经",
+    "北京财经"
+   ]
+  },
+  {
+   "key": "FHTV",
+   "name": "凤凰卫视",
+   "group": "港澳台频道",
+   "chno": 330,
+   "must": true,
+   "alias": [
+    "凤凰中文台",
+    "凤凰中文",
+    "凤凰卫视"
+   ]
+  },
+  {
+   "key": "FHHK",
+   "name": "凤凰香港",
+   "group": "港澳台频道",
+   "chno": 331,
+   "must": true,
+   "alias": [
+    "凤凰香港"
+   ]
+  },
+  {
+   "key": "TVBPEARL",
+   "name": "明珠台",
+   "group": "港澳台频道",
+   "chno": 332,
+   "must": true,
+   "alias": [
+    "TVBPEARL",
+    "明珠台"
+   ]
+  },
+  {
+   "key": "TVBJADE",
+   "name": "翡翠台",
+   "group": "港澳台频道",
+   "chno": 333,
+   "must": true,
+   "alias": [
+    "TVBJADE",
+    "翡翠台"
+   ]
+  },
+  {
+   "key": "TVBJ2",
+   "name": "TVB Plus",
+   "group": "港澳台频道",
+   "chno": 334,
+   "must": true,
+   "alias": [
+    "TVBPLUS",
+    "无线J2",
+    "J2台"
+   ]
+  },
+  {
+   "key": "AUSTV",
+   "name": "澳视澳门",
+   "group": "港澳台频道",
+   "chno": 335,
+   "must": true,
+   "alias": [
+    "澳门电视台",
+    "澳视澳门"
+   ]
+  },
+  {
+   "key": "MACAUHD",
+   "name": "澳门综艺",
+   "group": "港澳台频道",
+   "chno": 336,
+   "must": true,
+   "alias": [
+    "澳门综艺"
+   ]
+  },
+  {
+   "key": "HKSATV",
+   "name": "香港卫视",
+   "group": "港澳台频道",
+   "chno": 337,
+   "must": true,
+   "alias": [
+    "香港卫视"
+   ]
+  },
+  {
+   "key": "MUSICLIVE",
+   "name": "音乐现场",
+   "group": "音乐戏曲",
+   "chno": 340,
+   "must": true,
+   "alias": [
+    "音乐现场"
+   ]
+  },
+  {
+   "key": "CZTV",
+   "name": "梨园频道",
+   "group": "音乐戏曲",
+   "chno": 341,
+   "must": true,
+   "alias": [
+    "梨园频道",
+    "梨园"
+   ]
+  },
+  {
+   "key": "XQYS",
+   "name": "七彩戏剧",
+   "group": "音乐戏曲",
+   "chno": 342,
+   "must": true,
+   "alias": [
+    "七彩戏剧"
+   ]
+  },
+  {
+   "key": "CHCACTION",
+   "name": "CHC 动作电影",
+   "group": "影视综艺",
+   "chno": 350,
+   "must": true,
+   "alias": [
+    "CHC动作电影",
+    "CHC动作"
+   ]
+  },
+  {
+   "key": "CHCFAMILY",
+   "name": "CHC 家庭影院",
+   "group": "影视综艺",
+   "chno": 351,
+   "must": true,
+   "alias": [
+    "CHC家庭影院"
+   ]
+  },
+  {
+   "key": "CHCHD",
+   "name": "CHC 高清电影",
+   "group": "影视综艺",
+   "chno": 352,
+   "must": true,
+   "alias": [
+    "CHC高清电影"
+   ]
+  },
+  {
+   "key": "CHCSUSPENSE",
+   "name": "CHC 影迷电影",
+   "group": "影视综艺",
+   "chno": 353,
+   "must": true,
+   "alias": [
+    "CHC影迷电影"
+   ]
+  },
+  {
+   "key": "MEIYA",
+   "name": "美亚电影",
+   "group": "影视综艺",
+   "chno": 354,
+   "must": true,
+   "alias": [
+    "美亚电影"
+   ]
+  },
+  {
+   "key": "MDB",
+   "name": "埋堆堆",
+   "group": "影视综艺",
+   "chno": 355,
+   "must": true,
+   "alias": [
+    "埋堆堆"
+   ]
+  },
+  {
+   "key": "ZJSATV",
+   "name": "珠江频道",
+   "group": "影视综艺",
+   "chno": 356,
+   "must": true,
+   "alias": [
+    "珠江频道",
+    "珠江卫视"
+   ]
+  },
+  {
+   "key": "CGTN",
+   "name": "CGTN",
+   "group": "国际频道",
+   "chno": 360,
+   "must": true,
+   "alias": [
+    "CGTNENGLISH",
+    "CGTN英语",
+    "CGTN主频",
+    "CGTN"
+   ]
+  },
+  {
+   "key": "CGTNDOC",
+   "name": "CGTN 纪录",
+   "group": "国际频道",
+   "chno": 361,
+   "must": true,
+   "alias": [
+    "CGTNDOCUMENTARY",
+    "CGTN纪录"
+   ]
+  },
+  {
+   "key": "CGTNAR",
+   "name": "CGTN 阿语",
+   "group": "国际频道",
+   "chno": 362,
+   "must": true,
+   "alias": [
+    "CGTNARABIC",
+    "CGTN阿语"
+   ]
+  },
+  {
+   "key": "CGTNSP",
+   "name": "CGTN 西语",
+   "group": "国际频道",
+   "chno": 363,
+   "must": true,
+   "alias": [
+    "CGTNSPANISH",
+    "CGTN西语"
+   ]
+  },
+  {
+   "key": "CGTNRU",
+   "name": "CGTN 俄语",
+   "group": "国际频道",
+   "chno": 364,
+   "must": true,
+   "alias": [
+    "CGTNRUSSIAN",
+    "CGTN俄语"
+   ]
+  },
+  {
+   "key": "CGTNFR",
+   "name": "CGTN 法语",
+   "group": "国际频道",
+   "chno": 365,
+   "must": true,
+   "alias": [
+    "CGTNFRENCH",
+    "CGTN法语"
+   ]
+  }
+ ]
+}

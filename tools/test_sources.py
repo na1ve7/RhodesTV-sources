@@ -13,13 +13,23 @@ BAD_HOSTS = set()
 
 EXTINF = re.compile(r"#EXTINF:\s*(-?\d+(?:\.\d+)?)\s*(.*?),(.*)", re.I)
 ATTR = re.compile(r'([a-zA-Z0-9_-]+)="([^"]*)"')
+try:
+    import channels_cn as REG
+except Exception:                                     # 允许独立运行（无规范库时退化为旧行为）
+    REG = None
+try:
+    import classify_table as CLS
+except Exception:
+    CLS = None
+GROUP_ORDER = {g: i for i, g in enumerate(REG.GROUPS)} if REG else {}
+
 DEFAULT_SOURCES = [
     "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/cn.m3u",
     "https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.m3u",
 ]
 
 
-def http_get(url, timeout=15, referer=None, ua=UA):
+def _fetch_raw(url, timeout, referer, ua):
     req = urllib.request.Request(url, headers={
         "User-Agent": ua,
         "Referer": referer or url,
@@ -29,7 +39,28 @@ def http_get(url, timeout=15, referer=None, ua=UA):
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
     with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
-        raw = r.read()
+        return r.read()
+
+
+def http_get(url, timeout=15, referer=None, ua=UA):
+    """抓取文本。GitHub raw 直连在本机ISP下常被 DPI 阻断/RST（实测），
+    自动回退到公共镜像，保证云端与本地都能稳定抓到源。"""
+    urls = [url]
+    if "raw.githubusercontent.com" in url:
+        for m in ("https://gh-proxy.com/", "https://ghfast.top/",
+                  "https://ghproxy.net/", "https://raw.gitmirror.com/"):
+            urls.append(m + url)
+    raw, last = None, None
+    for u in urls:
+        try:
+            raw = _fetch_raw(u, timeout, (None if u == url else u), ua)
+            if u != url:
+                print("  [mirror] %s" % u.split('/')[2])
+            break
+        except Exception as e:
+            last = e
+    if raw is None:
+        raise last
     for enc in ("utf-8", "utf-8-sig", "gb18030", "latin-1"):
         try:
             return raw.decode(enc)
@@ -165,8 +196,188 @@ def norm_key(name):
     return s or (name or "").strip().upper()
 
 
+def canon(item):
+    """把上游频道名映射到规范频道（唯一真源 tools/channels_cn.py）。"""
+    raw = (item.get("name") or "").strip()
+    if REG:
+        m = REG.match(raw)
+        if m:
+            return {"key": m[0], "name": m[1], "group": m[2], "chno": m[3], "must": m[4]}
+    grp = item.get("group") or "其他频道"
+    if CLS:
+        try:
+            grp = CLS.classify(raw, grp)
+        except Exception:
+            pass
+    return {"key": norm_key(raw), "name": raw, "group": grp, "chno": None, "must": False}
+
+
+def order_key(r):
+    """组内排序：组顺序 -> 频道号 -> 名称（无频道号的排在本组最后）。"""
+    return (GROUP_ORDER.get(r.get("group"), 99),
+            r.get("chno") or 9999,
+            r.get("name") or "")
+
+
+# ---------- 单频道重体检（手机端「这个台卡了 → 立刻换一批线路」） ----------
+
+def line_score(r):
+    """线路排序：优先 HLS / 低码率 / 低首帧耗时（与全量模式同一套规则）"""
+    kind_rank = {"hls": 0, "ts": 1, "binary": 2}
+    t = r.get("ttf")
+    nm = (r.get("name") or "").lower()
+    heavy = 1 if ("4k" in nm or "2160" in nm or "8k" in nm) else 0
+    return (kind_rank.get(r.get("kind"), 3), heavy, 9e9 if t is None else t,
+            -(r.get("kbps") or 0))
+
+
+def extinf_block(r):
+    """写出一条线路的 m3u 文本块（格式与全量输出完全一致）"""
+    attrs = ' tvg-logo="%s"' % r.get("logo", "") if r.get("logo") else ""
+    if r.get("key"):
+        attrs += ' tvg-id="%s"' % r["key"]
+    if r.get("chno"):
+        attrs += ' tvg-chno="%d"' % r["chno"]
+    if r.get("dead"):
+        attrs += ' rhodes-dead="1"'
+    out = '#EXTINF:-1%s group-title="%s",%s\n' % (attrs, r["group"], r["name"])
+    if r.get("ua") and r["ua"] != UA:
+        out += "#EXTVLCOPT:http-user-agent=%s\n" % r["ua"]
+    if r.get("referer"):
+        out += "#EXTVLCOPT:http-referrer=%s\n" % r["referer"]
+    return out + r["url"] + "\n"
+
+
+def split_blocks(text):
+    """m3u 文本 → 条目块列表（每块 = 一条 #EXTINF + 可选 EXTVLCOPT + url 行）"""
+    out, cur = [], []
+    for ln in text.split("\n"):
+        if ln.startswith("#EXTINF"):
+            if cur:
+                out.append(cur)
+            cur = [ln]
+        elif cur:
+            cur.append(ln)
+    if cur:
+        out.append(cur)
+    return ["\n".join(b).strip("\n") + "\n" for b in out if b]
+
+
+def block_key(blk):
+    m = re.search(r'tvg-id="([^"]*)"', blk)
+    return m.group(1) if m else ""
+
+
+def recheck(a, key):
+    """只重新体检指定频道：其余频道从现有 dist/playable.m3u 原样保留，
+    本频道重新抓源→实测→挑最快几条写回。让手机端能对单个卡顿频道实时换源。"""
+    base_path = os.path.join(a.outdir, "playable.m3u")
+    if not os.path.exists(base_path):
+        print("[recheck] 基线不存在: %s" % base_path)
+        return 1
+    base = open(base_path, encoding="utf-8").read()
+
+    sources = []
+    if os.path.exists(a.infile):
+        with open(a.infile, encoding="utf-8") as f:
+            sources = [l.strip() for l in f if l.strip() and not l.startswith("#")]
+    if not sources:
+        sources = DEFAULT_SOURCES
+
+    cands, seen_url, seen = [], set(), set()
+    for s in sources:
+        try:
+            for c in parse_m3u(http_get(s), s):
+                u = (c.get("url") or "").strip()
+                c.update(canon(c))
+                if not u or c.get("key") != key or u in seen_url or (c["key"], u) in seen:
+                    continue
+                seen_url.add(u)
+                seen.add((c["key"], u))
+                cands.append(c)
+        except Exception as e:
+            print("  [fail] %s %s" % (s, e))
+    print("[recheck] %s 候选线路 %d 条" % (key, len(cands)))
+    if not cands:
+        print("[recheck] 上游暂无该频道线路，保持原状")
+        return 2
+
+    results = []
+    with ThreadPoolExecutor(max_workers=max(1, min(a.workers, len(cands)))) as ex:
+        for fu in as_completed([ex.submit(probe, c, a.timeout) for c in cands]):
+            results.append(fu.result())
+    good = [r for r in results if r.get("ok")]
+    good.sort(key=line_score)
+    head = good[0] if good else cands[0]
+
+    picked, seen_host, seen_u = [], set(), set()
+    for it in good:                                   # 先取不同主机
+        if len(picked) >= a.max_lines:
+            break
+        h = urllib.parse.urlparse(it["url"]).hostname or "?"
+        if h in seen_host or it["url"] in seen_u:
+            continue
+        picked.append(it); seen_host.add(h); seen_u.add(it["url"])
+    for it in good:                                   # 再补齐
+        if len(picked) >= a.max_lines:
+            break
+        if it["url"] in seen_u:
+            continue
+        picked.append(it); seen_u.add(it["url"])
+    for it in picked:
+        it["name"] = head["name"]
+        it["group"] = head["group"]
+        it["chno"] = head.get("chno")
+        it["tvg_id"] = head["key"]
+
+    if picked:
+        new_blocks = [extinf_block(it) for it in picked]
+    else:                                             # 全挂了：留占位灰显，等下一轮
+        ph = dict(head)
+        ph["dead"] = True
+        ph["url"] = "dead://" + key
+        new_blocks = [extinf_block(ph)]
+
+    blocks, kept_blocks, inserted = split_blocks(base), [], False
+    for blk in blocks:
+        if block_key(blk) == key:
+            if not inserted:
+                kept_blocks.extend(new_blocks)
+                inserted = True
+            continue
+        kept_blocks.append(blk)
+    if not inserted:
+        kept_blocks.extend(new_blocks)
+
+    with open(base_path, "w", encoding="utf-8", newline="\n") as f:
+        f.write("#EXTM3U\n" + "\n".join(b.rstrip("\n") for b in kept_blocks) + "\n")
+
+    rp = os.path.join(a.outdir, "report.json")
+    rep = {}
+    if os.path.exists(rp):
+        try:
+            rep = json.load(open(rp, encoding="utf-8"))
+        except Exception:
+            rep = {}
+    chs = [c for c in (rep.get("channels") or []) if c.get("key") != key]
+    chs += results
+    rep["channels"] = chs
+    rep["total"] = len(chs)
+    rep["ok"] = sum(1 for c in chs if c.get("ok"))
+    rep["last_recheck"] = {"key": key, "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+                           "candidates": len(cands), "ok": len(good), "lines": len(picked)}
+    with open(rp, "w", encoding="utf-8") as f:
+        json.dump(rep, f, ensure_ascii=False, indent=1)
+
+    print("[recheck] %s: 候选 %d, 可用 %d, 写入线路 %d"
+          % (key, len(cands), len(good), len(picked)))
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--recheck", default="",
+                    help="只重新体检该频道(tvg-id/规范key)，其余频道从现有输出原样保留")
     ap.add_argument("--in", dest="infile", default="sources.txt")
     ap.add_argument("--out", dest="outdir", default="dist")
     ap.add_argument("--workers", type=int, default=24)
@@ -174,6 +385,8 @@ def main():
     ap.add_argument("--max-lines", dest="max_lines", type=int, default=3,
                     help="每个频道最多保留几条线路(电视端卡顿时会自动切换)")
     a = ap.parse_args()
+    if a.recheck:
+        sys.exit(recheck(a, a.recheck))
 
     sources = []
     if os.path.exists(a.infile):
@@ -195,12 +408,13 @@ def main():
     seen_url, seen, uniq = set(), set(), []
     for c in chans:
         u = (c.get("url") or "").strip()
-        nk = norm_key(c.get("name") or "")
+        info = canon(c)
+        c.update(info)
+        nk = c["key"]
         if not u or not nk or u in seen_url or (nk, u) in seen:
             continue
         seen_url.add(u)
         seen.add((nk, u))
-        c["key"] = nk
         uniq.append(c)
     # 每个频道最多探测这么多个候选，控制总耗时
     MAX_CAND = 12
@@ -211,7 +425,8 @@ def main():
         cnt[c["key"]] += 1
         limited.append(c)
     uniq = limited
-    print("去重后:", len(uniq), "（频道数 %d）" % len(cnt))
+    print("去重后:", len(uniq), "（规范频道数 %d，规范库命中 %d）"
+          % (len(cnt), sum(1 for c in uniq if REG and REG.match(c.get("name") or ""))))
 
     results = []
     with ThreadPoolExecutor(max_workers=a.workers) as ex:
@@ -234,18 +449,15 @@ def main():
         heavy = 1 if ("4k" in nm or "2160" in nm or "8k" in nm) else 0   # 电视端优先低码率/低带宽线路
         return (KIND_RANK.get(r.get("kind"), 3), heavy, 9e9 if t is None else t, -(r.get("kbps") or 0))
 
-    # 按"归一化频道名"聚合：不同源写法不同，必须归并才能形成多线路（App 端按 name|group 合并线路）
-    by_name = {}
+    # 按「规范频道 key」聚合：同一频道在多个源里的线路合并，形成多线路备用
+    by_key = {}
     for r in good:
-        by_name.setdefault(r.get("key") or (r.get("name") or "").strip(), []).append(r)
+        by_key.setdefault(r.get("key") or (r.get("name") or "").strip(), []).append(r)
 
     kept = []
-    for name, items in by_name.items():
+    for key, items in by_key.items():
         items.sort(key=score)
-        canon = collections.Counter((i.get("group") or "未分组") for i in items).most_common(1)[0][0]
-        # 展示名：取出现次数最多且最短的写法，保证同名同组在 App 端被合并为同一频道的多条线路
-        disp = sorted(collections.Counter((i.get("name") or "").strip() for i in items).items(),
-                      key=lambda x: (-x[1], len(x[0])))[0][0]
+        head = items[0]
         picked, seen_host, seen_url = [], set(), set()
         for it in items:                                   # 第一轮：优先不同主机
             if len(picked) >= a.max_lines:
@@ -255,7 +467,7 @@ def main():
             if u in seen_url or h in seen_host:
                 continue
             picked.append(it); seen_host.add(h); seen_url.add(u)
-        for it in items:                                   # 第二轮：主机去重后不足则补齐
+        for it in items:                                   # 第二轮：补齐
             if len(picked) >= a.max_lines:
                 break
             if it["url"] in seen_url:
@@ -263,29 +475,48 @@ def main():
             picked.append(it); seen_url.add(it["url"])
         for it in picked:
             it["kept"] = True
-            it["canonical_group"] = canon
-            it["name"] = disp
-            if (it.get("group") or "未分组") != canon:      # 统一分组名，否则 App 会当成两个频道
-                it["group_original"] = it.get("group")
-                it["group"] = canon
+            it["name"] = head["name"]                      # 统一展示名为规范名
+            it["group"] = head["group"]                    # 统一分组为规范分组
+            it["chno"] = head.get("chno")
+            it["canonical_group"] = head["group"]
             kept.append(it)
         for it in items:
-            if not it.get("kept"):
-                it["kept"] = False
+            it.setdefault("kept", False)
 
-    kept.sort(key=lambda r: (r["group"], r["name"]))
-    n_chan = len(by_name)
-    multi = sum(1 for v in by_name.values() if len([x for x in v if x.get("kept")]) > 1)
-    print("频道(按名字去重): %d, 保留线路: %d (平均 %.2f), 多线路频道: %d"
-          % (n_chan, len(kept), len(kept) / max(n_chan, 1), multi))
+    # 必选频道占位：规范库中 must=True 但本轮无可用线路 -> 输出 dead 条目（电视端灰显，不消失）
+    placeholders = []
+    if REG:
+        for e in REG.REGISTRY:
+            if not e.get("must"):
+                continue
+            got = [x for x in by_key.get(e["key"], []) if x.get("kept")]
+            if got:
+                continue
+            placeholders.append({"key": e["key"], "name": e["name"], "group": e["group"],
+                                 "chno": e["chno"], "tvg_id": e["key"], "dead": True,
+                                 "url": "dead://" + e["key"], "logo": "", "ua": UA, "referer": ""})
+
+    kept.sort(key=order_key)
+    placeholders.sort(key=order_key)
+    n_chan = len(by_key)
+    multi = sum(1 for v in by_key.values() if len([x for x in v if x.get("kept")]) > 1)
+    print("频道(规范聚合): %d, 保留线路: %d (平均 %.2f), 多线路频道: %d, 占位(暂不可用): %d"
+          % (n_chan, len(kept), len(kept) / max(n_chan, 1), multi, len(placeholders)))
 
     os.makedirs(a.outdir, exist_ok=True)
+    all_rows = sorted(kept + placeholders, key=order_key)      # 活跃线路与占位统一按 组→频道号 排序
     with open(os.path.join(a.outdir, "playable.m3u"), "w", encoding="utf-8", newline="\n") as f:
         f.write("#EXTM3U\n")
-        for r in kept:
+        for r in all_rows:
             attrs = ' tvg-logo="%s"' % r.get("logo", "") if r.get("logo") else ""
-            if r.get("tvg_id"):
-                attrs += ' tvg-id="%s"' % r["tvg_id"]
+            # 统一用规范 key 做 tvg-id：同一频道在多个上游的 id 写法不同(CCTV1 / CCTV1.cn@SD)，
+            # 若照抄上游 id，电视端会把同一个台当成多个频道重复显示，也会丢掉多线路合并。
+            if r.get("key"):
+                attrs += ' tvg-id="%s"' % r["key"]
+            if r.get("chno"):
+                attrs += ' tvg-chno="%d"' % r["chno"]
+            if r.get("dead"):
+                attrs += ' rhodes-dead="1"'
             f.write('#EXTINF:-1%s group-title="%s",%s\n' % (attrs, r["group"], r["name"]))
             if r.get("ua") and r["ua"] != UA:
                 f.write("#EXTVLCOPT:http-user-agent=%s\n" % r["ua"])
@@ -307,6 +538,8 @@ def main():
             "lines_kept": len(kept),
             "max_lines": a.max_lines,
             "multi_line_channels": multi,
+            "placeholders": [{"key": p["key"], "name": p["name"], "group": p["group"],
+                              "chno": p["chno"]} for p in placeholders],
             "bad_hosts": sorted(bad_hosts.items(), key=lambda x: -x[1])[:50],
             "channels": results,
         }, f, ensure_ascii=False, indent=1)
