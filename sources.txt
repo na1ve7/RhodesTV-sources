@@ -1,0 +1,3 @@
+# Each line is one IPTV m3u source. Lines starting with # are comments.
+https://raw.githubusercontent.com/iptv-org/iptv/master/streams/cn.m3u
+https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.m3u

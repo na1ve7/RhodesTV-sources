@@ -1,0 +1,75 @@
+name: Refresh IPTV Sources
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      skip_gitee:
+        description: 'skip push to gitee'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch and test sources
+        run: |
+          set -e
+          python tools/test_sources.py --in sources.txt --out dist --workers 32 --timeout 8
+          python tools/gen_epg.py --m3u dist/playable.m3u --out dist --days 2 || echo "EPG failed, ignored"
+          ls -lh dist/ || true
+
+      - name: Gate check
+        run: |
+          python -c "import json,sys;d=json.load(open('dist/report.json',encoding='utf-8'));print('total',d['total'],'ok',d['ok']);sys.exit(0 if d['ok']>=20 else 1)"
+
+      - name: Commit to this repo
+        run: |
+          git config user.name  "rhodes-bot"
+          git config user.email "rhodes-bot@users.noreply.github.com"
+          git add -A dist
+          git diff --cached --quiet || git commit -m "chore: refresh sources $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push
+
+      - name: Push to Gitee
+        if: ${{ github.event.inputs.skip_gitee != 'true' }}
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_REPO: ${{ secrets.GITEE_REPO }}
+        run: |
+          if [ -z "$GITEE_TOKEN" ] || [ -z "$GITEE_REPO" ]; then
+            echo "Secrets not set, skip Gitee push"
+            exit 0
+          fi
+          cd /tmp
+          git clone --depth 1 "https://oauth2:${GITEE_TOKEN}@gitee.com/${GITEE_REPO}.git" gitee
+          cd gitee
+          git config user.name rhodes-bot
+          git config user.email rhodes-bot@users.noreply.github.com
+          mkdir -p dist
+          cp -f "${GITHUB_WORKSPACE}"/dist/* dist/ 2>/dev/null || true
+          git add -A
+          git diff --cached --quiet || git commit -m "refresh $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 14
