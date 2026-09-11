@@ -1,3 +1,14 @@
 # Each line is one IPTV m3u source. Lines starting with # are comments.
+# 源越多 -> 同一频道能凑出的"备用线路"越多 -> 电视端卡顿时可自动切换
+# 1) iptv-org 官方中国源（国际版，清晰度高）
 https://raw.githubusercontent.com/iptv-org/iptv/master/streams/cn.m3u
+# 2) vbskycn 国内直播源（央视/卫视/地方台，量大）
 https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.m3u
+# 3) suxuang/myIPTV IPv4（大列表，~1300 条）
+https://raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u
+# 4) zhumeng11/IPTV（~360 条）
+https://raw.githubusercontent.com/zhumeng11/IPTV/main/IPTV.m3u
+# 5) YanG-1989/m3u Gather
+https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u
+# 6) Kimentanm/aptv
+https://raw.githubusercontent.com/Kimentanm/aptv/master/m3u/iptv.m3u

@@ -31,7 +31,7 @@ jobs:
       - name: Fetch and test sources
         run: |
           set -e
-          python tools/test_sources.py --in sources.txt --out dist --workers 32 --timeout 8
+          python tools/test_sources.py --in sources.txt --out dist --workers 48 --timeout 8 --max-lines 3
           python tools/gen_epg.py --m3u dist/playable.m3u --out dist --days 2 || echo "EPG failed, ignored"
           ls -lh dist/ || true
 
