@@ -13,6 +13,11 @@
 """
 import argparse, collections, html, json, os, time, urllib.parse
 
+try:  # 与 App 端 GroupRules.kt 同源的 12 大类分类表
+    from classify_table import classify as _cls, norm as _norm, ORDER as _ORDER
+except Exception:  # 单独运行/缺文件时退化为上游分组
+    _cls = None; _norm = lambda n: (n or "").strip().lower(); _ORDER = []
+
 CSS = """
 :root{--bg:#0f1420;--card:#171e2e;--line:#26304a;--fg:#e8eefc;--dim:#8fa0c4;--ok:#3ddc84;--bad:#ff6b6b;--warn:#ffcc66;--acc:#4d9bff}
 *{box-sizing:border-box}
@@ -54,7 +59,7 @@ var groups={}, cur='全部分组', q='', sortKey='name', sortDir=1;
 DATA.forEach(function(c){groups[c.group]=(groups[c.group]||0)+1;});
 function fmtMs(t){return (t==null)?'-':Math.round(t*1000)+' ms';}
 function renderChips(){
-  var box=document.getElementById('chips'); var arr=Object.keys(groups).sort(function(a,b){return groups[b]-groups[a];});
+  var box=document.getElementById('chips'); var ORD=window.__ORDER__||[]; var arr=Object.keys(groups).sort(function(a,b){var ia=ORD.indexOf(a),ib=ORD.indexOf(b);if(ia<0)ia=999;if(ib<0)ib=999;return ia-ib;});
   var h='<div class="chip on" data-g="全部分组">全部分组 ('+DATA.length+')</div>';
   arr.forEach(function(g){h+='<div class="chip" data-g="'+g+'">'+g+' ('+groups[g]+')</div>';});
   box.innerHTML=h;
@@ -120,23 +125,29 @@ def build(rep, title, sub, generated_note=""):
     ok = [c for c in chans if c.get("ok")]
     fail = [c for c in chans if not c.get("ok")]
 
-    # 按 (name, group) 聚合出 App 视角的"频道"（App 的 key = name|group，同 key 的多条 URL = 多线路）
+    # 按 (频道名归一化, App 12 大类分组) 聚合出 App 视角的"频道"（同 key 的多条 URL = 多线路）
     agg = {}
     for c in ok:
-        key = (c.get("name"), c.get("group") or "未分组")
-        it = agg.setdefault(key, {"name": c.get("name"), "group": c.get("group") or "未分组",
-                                  "lines": [], "ttf": None, "kinds": set()})
+        raw = c.get("group") or ""
+        grp = _cls(c.get("name") or "", raw) if _cls else (c.get("canonical_group") or raw or "未分组")
+        key = (_norm(c.get("name") or ""), grp)
+        it = agg.setdefault(key, {"name": c.get("name"), "group": grp, "lines": [], "ttf": None,
+                                  "kinds": set(), "_names": collections.Counter()})
+        it["_names"][(c.get("name") or "").strip()] += 1
         it["lines"].append(c.get("url"))
         t = c.get("ttf")
         if t is not None and (it["ttf"] is None or t < it["ttf"]):
             it["ttf"] = t
         it["kinds"].add(c.get("kind") or "?")
 
+    order = [lbl for _k, lbl in _ORDER] or []
     rows = []
     for it in agg.values():
+        # 展示名：取出现次数最多、最短的写法（与云端/App 的展示名一致）
+        it["name"] = sorted(it.pop("_names").items(), key=lambda x: (-x[1], len(x[0])))[0][0]
         it["kinds"] = "/".join(sorted(it["kinds"]))
         rows.append(it)
-    rows.sort(key=lambda r: (r["group"], r["name"]))
+    rows.sort(key=lambda r: (order.index(r["group"]) if r["group"] in order else 99, r["name"]))
 
     multi = sum(1 for r in rows if len(r["lines"]) > 1)
     total_lines = sum(len(r["lines"]) for r in rows)
@@ -180,7 +191,7 @@ def build(rep, title, sub, generated_note=""):
         html.escape(", ".join("%s×%d" % (r, n) for r, n in fail_reasons.most_common(8)) or "无"),
         "</div><div>本页由 tools/channel_report.py 自动生成（数据源 dist/report.json）。</div>",
         "</div></div>",
-        "<script>window.__DATA__=", payload, ";</script><script>", JS, "</script>",
+        "<script>window.__ORDER__=", json.dumps(order, ensure_ascii=False), ";window.__DATA__=", payload, ";</script><script>", JS, "</script>",
         "</body></html>",
     ]
     return "".join(html_parts)
