@@ -10,3 +10,8 @@ https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/index.m3u
 https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u
 https://raw.githubusercontent.com/YueChan/Live/main/IPTV.m3u
 https://raw.githubusercontent.com/hujingguang/ChinaIPTV/main/cnTV_AutoUpdate.m3u8
+# --- IPv6 专项（2026-09 新增；本机默认无 v6，这些线路会被标 skip_env_no_v6 保留）---
+https://raw.githubusercontent.com/4yt1k/m3u-autoupdate/master/output/result.m3u
+https://raw.githubusercontent.com/alantang1977/iptv_api/main/output/live_ipv6.m3u
+https://raw.githubusercontent.com/niuber/iptv-api/master/output/ipv6/result.m3u
+https://raw.githubusercontent.com/gohkh0825live/iptv-api-cn/main/output/ipv6/result.m3u

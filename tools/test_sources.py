@@ -11,6 +11,72 @@ UA = ("Mozilla/5.0 (Linux; Android 11; TV) AppleWebKit/537.36 (KHTML, like Gecko
 # 已知被运营商 DNS 污染/黑洞的域名（可继续追加）
 BAD_HOSTS = set()
 
+# ---------- IPv6 感知 -------------------------------------------------------
+# GitHub Actions 免费 runner 没有 IPv6 出站（本机开发环境同样没有）。
+# 云端体检绝不能把 v6 线路"判死"：无 v6 出口时统一标 skip_env_no_v6 ——
+# 不计失败、不进 bad_hosts、不计入 ok、不影响 gate，也**不从 playable.m3u 剔除**
+# （用户在自家宽带有 v6，这些线路可能正是最稳的）。
+SKIP_NO_V6 = "skip_env_no_v6"
+# 真实 TCP 探测目标（IPv6 字面量，不依赖 DNS）：国内公共 DNS 的 53 端口
+V6_ENV_TARGETS = [("2400:3200::1", 53), ("2400:3200:baba::1", 53), ("240e:4c:4008::1", 53)]
+
+_FAMILY_CACHE = {}
+_V6_ENV_CACHE = {}
+
+
+def url_family(url):
+    """线路地址的协议族：v6_literal(URL host 是 IPv6 字面量) / has_aaaa(host 有 AAAA 记录) / v4_only"""
+    host = urllib.parse.urlparse(url).hostname or ""
+    if ":" in host:                      # urlparse 已去掉方括号，v6 字面量 host 里一定有冒号
+        return "v6_literal"
+    if not host:
+        return "v4_only"
+    if host in _FAMILY_CACHE:
+        return _FAMILY_CACHE[host]
+    fam = "v4_only"
+    try:
+        if socket.getaddrinfo(host, None, socket.AF_INET6):
+            fam = "has_aaaa"
+    except Exception:
+        pass
+    _FAMILY_CACHE[host] = fam
+    return fam
+
+
+def detect_v6_env(targets=None, timeout=3.0):
+    """本运行环境是否有 IPv6 出站：对 v6 目标做**真实 TCP 连接**。
+    注意：能解析出 AAAA 记录 != 有 v6 出口（DNS 结果不代表可用路由），所以只认连接成功。"""
+    for host, port in (targets or V6_ENV_TARGETS):
+        try:
+            infos = socket.getaddrinfo(host, port, socket.AF_INET6, socket.SOCK_STREAM)
+        except Exception:
+            continue
+        for _fam, _typ, _proto, _cn, sa in infos:
+            s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            s.settimeout(timeout)
+            try:
+                s.connect(sa)
+                return True
+            except Exception:
+                continue
+            finally:
+                try:
+                    s.close()
+                except Exception:
+                    pass
+    return False
+
+
+def get_v6_env(force=False):
+    """带缓存的环境探测结果（单测注入 detect_v6_env 后用 force=True 刷新）。"""
+    if force or "v" not in _V6_ENV_CACHE:
+        try:
+            _V6_ENV_CACHE["v"] = bool(detect_v6_env())
+        except Exception:
+            _V6_ENV_CACHE["v"] = False
+    return _V6_ENV_CACHE["v"]
+
+
 EXTINF = re.compile(r"#EXTINF:\s*(-?\d+(?:\.\d+)?)\s*(.*?),(.*)", re.I)
 ATTR = re.compile(r'([a-zA-Z0-9_-]+)="([^"]*)"')
 try:
@@ -112,12 +178,20 @@ def parse_m3u(text, source_name=""):
     return out
 
 
-def probe(item, timeout):
-    """探测单个流：先建连，再拉一段数据，判断是否真的能出流"""
+def probe(item, timeout, v6_env=None):
+    """探测单个流：先建连，再拉一段数据，判断是否真的能出流。
+    v6_env=False（本环境无 v6 出口）时，非 v4_only 的线路不做网络探测，
+    直接标 skip_env_no_v6：不算失败、不算 ok，但仍保留进 playable.m3u。"""
     url = item["url"]
     host = urllib.parse.urlparse(url).hostname or ""
+    family = url_family(url)
     if host in BAD_HOSTS:
-        return dict(item, ok=False, reason="blacklist")
+        return dict(item, ok=False, reason="blacklist", family=family)
+    if v6_env is None:
+        v6_env = get_v6_env()
+    if not v6_env and family != "v4_only":
+        return dict(item, ok=False, skip=True, family=family,
+                    status=SKIP_NO_V6, reason=SKIP_NO_V6)
     t0 = time.time()
     try:
         req = urllib.request.Request(url, headers={
@@ -135,7 +209,8 @@ def probe(item, timeout):
             r.close()
         dt = time.time() - t0
         if code != 200 or not first:
-            return dict(item, ok=False, reason="http_%s_or_empty" % code)
+            return dict(item, ok=False, family=family, status="http_error",
+                        reason="http_%s_or_empty" % code)
         # m3u8 分片索引 / ts 流
         head = first[:512]
         if b"#EXTM3U" in first:
@@ -144,10 +219,11 @@ def probe(item, timeout):
             kind = "ts"
         else:
             kind = "binary"
-        return dict(item, ok=True, reason="ok", kind=kind,
+        return dict(item, ok=True, reason="ok", kind=kind, family=family, status="ok",
                     ttf=round(dt, 3), kbps=round(len(first) * 8 / max(dt, 0.001) / 1000, 1))
     except Exception as e:
-        return dict(item, ok=False, reason=type(e).__name__ + ":" + str(e)[:60])
+        return dict(item, ok=False, family=family, status="error",
+                    reason=type(e).__name__ + ":" + str(e)[:60])
 
 
 QUALITY_RE = re.compile(r"[\(\[（【][^\)\]）】]{0,24}[\)\]）】]\s*$")
@@ -302,23 +378,26 @@ def recheck(a, key):
         print("[recheck] 上游暂无该频道线路，保持原状")
         return 2
 
+    v6_env = get_v6_env()
     results = []
     with ThreadPoolExecutor(max_workers=max(1, min(a.workers, len(cands)))) as ex:
-        for fu in as_completed([ex.submit(probe, c, a.timeout) for c in cands]):
+        for fu in as_completed([ex.submit(probe, c, a.timeout, v6_env) for c in cands]):
             results.append(fu.result())
     good = [r for r in results if r.get("ok")]
-    good.sort(key=line_score)
-    head = good[0] if good else cands[0]
+    skipped = [r for r in results if r.get("skip")]     # 本环境无 v6 出口 -> 保留、不判死
+    usable = good + skipped
+    usable.sort(key=line_score)
+    head = usable[0] if usable else cands[0]
 
     picked, seen_host, seen_u = [], set(), set()
-    for it in good:                                   # 先取不同主机
+    for it in usable:                                 # 先取不同主机
         if len(picked) >= a.max_lines:
             break
         h = urllib.parse.urlparse(it["url"]).hostname or "?"
         if h in seen_host or it["url"] in seen_u:
             continue
         picked.append(it); seen_host.add(h); seen_u.add(it["url"])
-    for it in good:                                   # 再补齐
+    for it in usable:                                 # 再补齐
         if len(picked) >= a.max_lines:
             break
         if it["url"] in seen_u:
@@ -365,12 +444,13 @@ def recheck(a, key):
     rep["total"] = len(chs)
     rep["ok"] = sum(1 for c in chs if c.get("ok"))
     rep["last_recheck"] = {"key": key, "time": time.strftime("%Y-%m-%d %H:%M:%S"),
-                           "candidates": len(cands), "ok": len(good), "lines": len(picked)}
+                           "candidates": len(cands), "ok": len(good),
+                           "skip_env_no_v6": len(skipped), "lines": len(picked)}
     with open(rp, "w", encoding="utf-8") as f:
         json.dump(rep, f, ensure_ascii=False, indent=1)
 
-    print("[recheck] %s: 候选 %d, 可用 %d, 写入线路 %d"
-          % (key, len(cands), len(good), len(picked)))
+    print("[recheck] %s: 候选 %d, 可用 %d, 跳过(无v6环境) %d, 写入线路 %d"
+          % (key, len(cands), len(good), len(skipped), len(picked)))
     return 0
 
 
@@ -394,7 +474,8 @@ def main():
             sources = [l.strip() for l in f if l.strip() and not l.startswith("#")]
     if not sources:
         sources = DEFAULT_SOURCES
-    print("源数量:", len(sources))
+    v6_env = get_v6_env()
+    print("源数量:", len(sources), "| 本环境 IPv6 出站:", v6_env)
 
     chans = []
     for s in sources:
@@ -430,15 +511,19 @@ def main():
 
     results = []
     with ThreadPoolExecutor(max_workers=a.workers) as ex:
-        futs = [ex.submit(probe, c, a.timeout) for c in uniq]
+        futs = [ex.submit(probe, c, a.timeout, v6_env) for c in uniq]
         for i, fu in enumerate(as_completed(futs), 1):
             results.append(fu.result())
             if i % 100 == 0:
                 print("  探测进度 %d/%d" % (i, len(futs)), flush=True)
 
     good = [r for r in results if r.get("ok")]
+    # 本环境无 v6 出口时被跳过的线路：不算失败、不算 ok，但要保留进 playable.m3u
+    skipped = [r for r in results if r.get("skip")]
+    usable = good + skipped
     good.sort(key=lambda r: (r["group"], r["name"]))
-    print("可用: %d / %d" % (len(good), len(results)))
+    print("可用: %d / %d（另有 %d 条因本环境无 v6 出口跳过，保留待用户家里用）"
+          % (len(good), len(results), len(skipped)))
 
     # ---- 多线路聚合：同一频道保留最快的 N 条线路（优先不同主机，避免同一挂全挂）----
     KIND_RANK = {"hls": 0, "ts": 1, "binary": 2}
@@ -450,8 +535,10 @@ def main():
         return (KIND_RANK.get(r.get("kind"), 3), heavy, 9e9 if t is None else t, -(r.get("kbps") or 0))
 
     # 按「规范频道 key」聚合：同一频道在多个源里的线路合并，形成多线路备用
+    # 注意：这里用 usable(=good+skipped)，即本环境测不了的 v6 线路也保留在清单里，
+    # 只是排序时排在真·可用线路后面（score 对 skip 线路给 kind=3 + ttf=9e9）。
     by_key = {}
-    for r in good:
+    for r in usable:
         by_key.setdefault(r.get("key") or (r.get("name") or "").strip(), []).append(r)
 
     kept = []
@@ -526,13 +613,20 @@ def main():
 
     bad_hosts = {}
     for r in results:
-        if not r.get("ok"):
-            h = urllib.parse.urlparse(r["url"]).hostname or "?"
-            bad_hosts[h] = bad_hosts.get(h, 0) + 1
+        if r.get("ok") or r.get("skip"):        # skip=本环境无 v6 出口，不是线路的错
+            continue
+        h = urllib.parse.urlparse(r["url"]).hostname or "?"
+        bad_hosts[h] = bad_hosts.get(h, 0) + 1
+    fam_cnt = collections.Counter(r.get("family", "?") for r in results)
     with open(os.path.join(a.outdir, "report.json"), "w", encoding="utf-8") as f:
         json.dump({
             "generated": time.strftime("%Y-%m-%d %H:%M:%S"),
             "total": len(results),
+            # 云端 runner 通常没有 IPv6 出站；此时 v6 线路只跳过不判死，
+            # ok 口径与改动前一致（skip 既不计 ok 也不计失败），CI gate 不受影响。
+            "v6_env": bool(v6_env),
+            "skip_env_no_v6": len(skipped),
+            "family_counts": dict(fam_cnt),
             "ok": len(good),
             "channels_unique": n_chan,
             "lines_kept": len(kept),
