@@ -147,6 +147,14 @@ def parse_m3u(text, source_name=""):
             m = re.search(r"(http-user-agent|http-referrer)\s*=\s*(.+)", line, re.I)
             if m:
                 k, v = m.group(1).lower(), m.group(2).strip()
+                # 上游有的源把整行 #EXTVLCOPT:… 当成值写进来（形成双层前缀）。
+                # 不剥离的话 UA 会变成 "#EXTVLCOPT:http-user-agent=…"，播放器发出非法
+                # User-Agent 会被部分 CDN 直接拒绝（403/400），表现为「清单里有源但播不了」。
+                for _ in range(4):
+                    nv = re.sub(r"^\s*#?\s*EXTVLCOPT\s*:\s*[A-Za-z0-9_.-]+\s*=\s*", "", v, flags=re.I)
+                    if nv == v:
+                        break
+                    v = nv.strip()
                 if "user-agent" in k:
                     ua = v
                 else:
@@ -611,6 +619,8 @@ def main():
                     help="每个频道最多保留几条线路(电视端卡顿时会自动切换)")
     ap.add_argument("--min-kbps", dest="min_kbps", type=float, default=HARD_MIN_KBPS,
                     help="深度测速吞吐低于此值(KB/s)的线路判为不可用（默认 %(default)s）")
+    ap.add_argument("--include-v6", action="store_true",
+                    help="把本环境测不了的 IPv6 线路也写进 playable.m3u（默认只写 ipv6_pending.m3u）")
     ap.add_argument("--no-deep", action="store_true",
                     help="关闭深度测速（退回 v2.0「能建连即可用」口径，仅用于快速排查）")
     a = ap.parse_args()
@@ -717,7 +727,11 @@ def main():
         print("  慢源复测: %d 条按 host 串行重测（避免同 IP 并发被 CDN 限速误杀）" % retried)
     # 本环境无 v6 出口时被跳过的线路：不算失败、不算 ok，但要保留进 playable.m3u
     skipped = [r for r in results if r.get("skip")]
-    usable = good + skipped
+    # 本环境无 IPv6 出口时被跳过的线路：默认**不**写进主清单。
+    # 绝大多数家庭宽带没有 v6 出口，混进 playable.m3u 只会让电视端先超时再换线
+    # （体感就是「点了没反应 / 好像全都播不了」）。需要时用 --include-v6 打开，
+    # 或直接分发 dist/ipv6_pending.m3u 给有 v6 出口的播放端。
+    usable = good + (skipped if getattr(a, "include_v6", False) else [])
     good.sort(key=lambda r: (r["group"], r["name"]))
     print("可用: %d / %d（另有 %d 条因本环境无 v6 出口跳过，保留待用户家里用）"
           % (len(good), len(results), len(skipped)))

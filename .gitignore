@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 # 本地实验/体检原始日志（体积大，不发布）
 research/
+# 离线重导时的原文件备份
+dist/_regen_backup_*/
