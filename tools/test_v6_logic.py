@@ -230,12 +230,43 @@ def test_D_speed_gate():
           and "speed_kbps" not in r6, r6.get("status"))
 
 
+# ------------------------------------------------- 慢源复测（v2.1.1 新增）
+def test_F_retest_recover():
+    print("[F] 慢源复测：首轮被并发限速误判的源，复测要能救回")
+    real = ts.measure_stream
+    calls = {}
+
+    def fake(it, t, **k):
+        u = it["url"]
+        calls[u] = calls.get(u, 0) + 1
+        return (5.0, 1, "hls") if calls[u] == 1 else (600.0, 2, "hls")
+
+    try:
+        ts.measure_stream = fake
+        r = dict(item(V4), ok=True, status="ok", kind="hls")
+        ts.deep_verify(r, 2, 40.0)
+        check("F1 首轮低速判 slow", r.get("ok") is False and r.get("status") == "slow", r.get("reason"))
+        ts.deep_verify(r, 2, 40.0)
+        check("F2 不带 force 不会重测已判死的源（避免无谓流量）", r.get("ok") is False)
+        ts.deep_verify(r, 2, 40.0, force=True)
+        check("F3 force=True 复测后救回并记录新速率",
+              r.get("ok") is True and r.get("speed_kbps") == 600.0 and r.get("status") == "ok",
+              r.get("speed_kbps"))
+        r6 = dict(item(V6), ok=False, skip=True, status="skip_env_no_v6")
+        ts.deep_verify(r6, 2, 40.0, force=True)
+        check("F4 本环境无 v6 的 skip 线路，即使 force 也不判死",
+              r6.get("skip") is True and r6.get("ok") is False)
+    finally:
+        ts.measure_stream = real
+
+
 if __name__ == "__main__":
     print("=" * 72)
     test_A_no_v6_env()
     test_B_inject_v6_env()
     test_C_end_to_end()
     test_D_speed_gate()
+    test_F_retest_recover()
     print("=" * 72)
     if FAILED:
         print("FAILED %d: %s" % (len(FAILED), FAILED))

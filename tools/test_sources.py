@@ -273,10 +273,13 @@ def measure_stream(item, timeout, deep_segs=DEEP_SEGS, cap=SEG_CAP, budget=SEG_B
     return 0.0, 0, "hops_exceeded"
 
 
-def deep_verify(rec, timeout, min_kbps=None):
+def deep_verify(rec, timeout, min_kbps=None, force=False):
     """对「快速摸底已通过」的记录做深度测速，就地更新 ok/status/speed_kbps。
-    返回是否仍可用。本环境无 v6 出口而 skip 的线路不适用（没测就是不判死）。"""
-    if not rec.get("ok") or rec.get("skip"):
+    返回是否仍可用。本环境无 v6 出口而 skip 的线路不适用（没测就是不判死）。
+    force=True 专供「慢源复测」：允许对首轮已判 slow 的记录重新测一次。"""
+    if rec.get("skip"):
+        return False
+    if not force and not rec.get("ok"):
         return bool(rec.get("ok"))
     min_kbps = HARD_MIN_KBPS if min_kbps is None else min_kbps
     sp, segs, note = measure_stream(rec, timeout)
@@ -288,6 +291,7 @@ def deep_verify(rec, timeout, min_kbps=None):
         rec["status"] = "slow"
         rec["reason"] = "slow:%sKB/s,segs=%d,%s" % (round(sp, 1), segs, note)
         return False
+    rec["ok"] = True
     rec["status"] = "ok"
     rec["reason"] = "ok"
     return True
@@ -675,13 +679,42 @@ def main():
             for fu in as_completed([ex.submit(deep_verify, r, a.timeout, a.min_kbps)
                                     for r in good]):
                 fu.result()
+        first_pass_ok = sum(1 for r in good if r.get("ok"))
+        retried, revived = 0, 0
+        # ---- 阶段 2b：慢源按 host 串行复测（消除「同 IP 并发被服务器限速」导致的误杀）----
+        # 实测教训：湖北公共 SD 单独测 841 KB/s，但 48 并发时被压到 24 KB/s 而判慢 ——
+        # 原因是同一 CDN 对同一 IP 的并发连接做了限速。复测时同 host 串行 + 重试 1 次。
+        slow = [r for r in good if not r.get("ok")]
+        if slow:
+            groups = collections.OrderedDict()
+            for r in slow:
+                h = urllib.parse.urlparse(r["url"]).hostname or ""
+                groups.setdefault(h, []).append(r)
+            retried = len(slow)
+
+            def _retest_host(rs):
+                n = 0
+                for r in rs:
+                    for _ in range(2):              # 首测 + 1 次重试
+                        deep_verify(r, a.timeout, a.min_kbps, force=True)
+                        if r.get("ok"):
+                            n += 1
+                            break
+                        time.sleep(0.4)
+                return n
+
+            with ThreadPoolExecutor(max_workers=max(2, a.workers // 8)) as ex:
+                revived = sum(fu.result() for fu in
+                              [ex.submit(_retest_host, rs) for rs in groups.values()])
         good = [r for r in results if r.get("ok")]
         slow_killed = n_before - len(good)
         spd = sorted((r.get("speed_kbps") or 0) for r in good)
         med = spd[len(spd) // 2] if spd else 0
-        print("深度测速: %d 条通过摸底 -> %d 条真能播（剔除 %d 条「清单能拉/分片拉不动」），"
-              "实测吞吐中位数 %.0f KB/s，耗时 %.0fs"
-              % (n_before, len(good), slow_killed, med, time.time() - t0))
+        print("深度测速: %d 条通过摸底 -> %d 条真能播（首轮剔除 %d 条，慢源复测救回 %d 条，"
+              "净剔除 %d 条「清单能拉/分片拉不动」），实测吞吐中位数 %.0f KB/s，耗时 %.0fs"
+              % (n_before, len(good), n_before - first_pass_ok, revived, slow_killed,
+                 med, time.time() - t0))
+        print("  慢源复测: %d 条按 host 串行重测（避免同 IP 并发被 CDN 限速误杀）" % retried)
     # 本环境无 v6 出口时被跳过的线路：不算失败、不算 ok，但要保留进 playable.m3u
     skipped = [r for r in results if r.get("skip")]
     usable = good + skipped
@@ -800,6 +833,8 @@ def main():
             "min_kbps": a.min_kbps,
             "good_kbps": GOOD_KBPS,
             "slow_killed": slow_killed,
+            "slow_retried": retried,
+            "slow_revived": revived,
             "speed_median_kbps": speed_median,
             "channels_unique": n_chan,
             "lines_kept": len(kept),
