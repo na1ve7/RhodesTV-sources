@@ -178,6 +178,121 @@ def parse_m3u(text, source_name=""):
     return out
 
 
+# ---------- 深度测速：真下载分片，按实测吞吐判定 -----------------------------
+# 教训（2026-09-12 真机复现）：只验「能建连 / 能拿到 m3u8 开头」会把
+# 「清单秒回、分片拉不动」的源当成可用源。CCTV5+ 某线路 m3u8 只有 545 B 却
+# 0.1 KB/s，续拉 ts 分片直接超时 —— 电视端表现就是「播 3 秒画面不动、
+# 飞速切 3 条线路全挂」。所以 ok 判定必须基于真实吞吐。
+HARD_MIN_KBPS = 40.0     # 硬底线(≈320 kbps)：低于此值视为不能播 -> 判失败
+GOOD_KBPS = 120.0        # 优选线(≈960 kbps)：排序优先，低于此值仍保留但排后面
+SEG_CAP = 384 * 1024     # 单个分片最多读这么多字节就够估速率
+DEEP_SEGS = 2            # 连续拉几个分片
+MAX_HOPS = 3             # master playlist -> media playlist 最多跳几层
+SEG_BUDGET = 6.0         # 单条线路下载分片的总时间预算(秒)，防止慢源拖垮体检
+
+
+def _http_open(url, timeout, ua=None, referer=None):
+    req = urllib.request.Request(url, headers={
+        "User-Agent": ua or UA,
+        "Referer": referer or url,
+        "Accept": "*/*",
+        "Connection": "close",
+    })
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return urllib.request.urlopen(req, timeout=timeout, context=ctx)
+
+
+def _read_capped(resp, cap, deadline=None):
+    """最多读 cap 字节。resp.read(n) 返回短块即代表流结束，必须 break，
+    否则遇到短响应（或测试打桩）会死循环。"""
+    buf = b""
+    while len(buf) < cap:
+        if deadline is not None and time.time() > deadline:
+            break
+        n = min(65536, cap - len(buf))
+        chunk = resp.read(n)
+        if not chunk:
+            break
+        buf += chunk
+        if len(chunk) < n:
+            break
+    return buf
+
+
+def measure_stream(item, timeout, deep_segs=DEEP_SEGS, cap=SEG_CAP, budget=SEG_BUDGET):
+    """真实吞吐测速 -> (speed_kbps, segs_ok, note)
+
+    HLS：逐层解开 master playlist（选最低 BANDWIDTH 的子清单，电视端要的是不卡），
+          然后真下载前 N 个分片；直链(ts)：直接限读一段估速率。
+    speed 只按「下载耗时」计（不含首次建连），避免把网络时延算成带宽。
+    """
+    ua, ref = item.get("ua") or UA, item.get("referer") or ""
+    url = item["url"]
+    for _hop in range(MAX_HOPS):
+        t0 = time.time()
+        try:
+            with _http_open(url, timeout, ua, ref) as r:
+                body = _read_capped(r, 512 * 1024)
+        except Exception as e:
+            return 0.0, 0, "open_fail:" + type(e).__name__
+        if b"#EXTM3U" not in body[:512]:
+            if not body:
+                return 0.0, 0, "empty"
+            return (len(body) / 1024.0 / max(time.time() - t0, 0.001), 1, "direct")
+        lines = [l.strip() for l in body.decode("utf-8", "ignore").splitlines() if l.strip()]
+        sub, best = None, None
+        for i, l in enumerate(lines):
+            if l.upper().startswith("#EXT-X-STREAM-INF") and i + 1 < len(lines):
+                m = re.search(r"BANDWIDTH=(\d+)", l, re.I)
+                bw = int(m.group(1)) if m else 0
+                if sub is None or bw < (best or 0):
+                    sub, best = lines[i + 1], bw
+        if sub:                                  # master playlist -> 下一层
+            url = urllib.parse.urljoin(url, sub)
+            continue
+        segs = [urllib.parse.urljoin(url, l) for l in lines if not l.startswith("#")]
+        if not segs:
+            return 0.0, 0, "no_seg"
+        total, ok, t_dl = 0, 0, 0.0
+        for su in segs[:deep_segs]:
+            t = time.time()
+            try:
+                with _http_open(su, min(timeout, budget), ua, ref) as r:
+                    d = _read_capped(r, cap, deadline=t + budget)
+            except Exception:
+                continue
+            if d:
+                total += len(d)
+                ok += 1
+                t_dl += time.time() - t
+        if not ok:
+            return 0.0, 0, "seg_fail"
+        return (total / 1024.0 / max(t_dl, 0.001), ok, "hls")
+    return 0.0, 0, "hops_exceeded"
+
+
+def deep_verify(rec, timeout, min_kbps=None):
+    """对「快速摸底已通过」的记录做深度测速，就地更新 ok/status/speed_kbps。
+    返回是否仍可用。本环境无 v6 出口而 skip 的线路不适用（没测就是不判死）。"""
+    if not rec.get("ok") or rec.get("skip"):
+        return bool(rec.get("ok"))
+    min_kbps = HARD_MIN_KBPS if min_kbps is None else min_kbps
+    sp, segs, note = measure_stream(rec, timeout)
+    rec["speed_kbps"] = round(sp, 1)
+    rec["segs"] = segs
+    rec["speed_note"] = note
+    if segs == 0 or sp < min_kbps:
+        rec["ok"] = False
+        rec["status"] = "slow"
+        rec["reason"] = "slow:%sKB/s,segs=%d,%s" % (round(sp, 1), segs, note)
+        return False
+    rec["status"] = "ok"
+    rec["reason"] = "ok"
+    return True
+
+
 def probe(item, timeout, v6_env=None):
     """探测单个流：先建连，再拉一段数据，判断是否真的能出流。
     v6_env=False（本环境无 v6 出口）时，非 v4_only 的线路不做网络探测，
@@ -297,14 +412,26 @@ def order_key(r):
 
 # ---------- 单频道重体检（手机端「这个台卡了 → 立刻换一批线路」） ----------
 
+def speed_band(r):
+    """实测吞吐分档：0=优选(>=GOOD_KBPS) 1=够用(>=HARD_MIN_KBPS) 2=未测到速度 3=本环境无 v6 未测"""
+    sp = r.get("speed_kbps") or 0
+    if r.get("skip"):
+        return 3
+    if sp >= GOOD_KBPS:
+        return 0
+    if sp >= HARD_MIN_KBPS:
+        return 1
+    return 2
+
+
 def line_score(r):
-    """线路排序：优先 HLS / 低码率 / 低首帧耗时（与全量模式同一套规则）"""
+    """线路排序：先按实测吞吐分档（快 > 够用 > 未测），再优先 HLS / 低码率 / 低首帧"""
     kind_rank = {"hls": 0, "ts": 1, "binary": 2}
     t = r.get("ttf")
     nm = (r.get("name") or "").lower()
     heavy = 1 if ("4k" in nm or "2160" in nm or "8k" in nm) else 0
-    return (kind_rank.get(r.get("kind"), 3), heavy, 9e9 if t is None else t,
-            -(r.get("kbps") or 0))
+    return (speed_band(r), kind_rank.get(r.get("kind"), 3), heavy,
+            9e9 if t is None else t, -(r.get("speed_kbps") or 0))
 
 
 def extinf_block(r):
@@ -384,6 +511,16 @@ def recheck(a, key):
         for fu in as_completed([ex.submit(probe, c, a.timeout, v6_env) for c in cands]):
             results.append(fu.result())
     good = [r for r in results if r.get("ok")]
+    # 单频道重体检同样必须真测速：手机端「这个台卡了 → 立刻换源」最常走的路径，
+    # 若只验建连，会出现「点了一次换源，新线路照样卡」的假成功。
+    slow_killed = 0
+    if good and not getattr(a, "no_deep", False):
+        with ThreadPoolExecutor(max_workers=max(1, min(a.workers, len(good)))) as ex:
+            for fu in as_completed([ex.submit(deep_verify, r, a.timeout, a.min_kbps)
+                                    for r in good]):
+                fu.result()
+        slow_killed = sum(1 for r in good if not r.get("ok"))
+        good = [r for r in results if r.get("ok")]
     skipped = [r for r in results if r.get("skip")]     # 本环境无 v6 出口 -> 保留、不判死
     usable = good + skipped
     usable.sort(key=line_score)
@@ -445,12 +582,16 @@ def recheck(a, key):
     rep["ok"] = sum(1 for c in chs if c.get("ok"))
     rep["last_recheck"] = {"key": key, "time": time.strftime("%Y-%m-%d %H:%M:%S"),
                            "candidates": len(cands), "ok": len(good),
+                           "slow_killed": slow_killed, "deep": not getattr(a, "no_deep", False),
                            "skip_env_no_v6": len(skipped), "lines": len(picked)}
     with open(rp, "w", encoding="utf-8") as f:
         json.dump(rep, f, ensure_ascii=False, indent=1)
 
-    print("[recheck] %s: 候选 %d, 可用 %d, 跳过(无v6环境) %d, 写入线路 %d"
-          % (key, len(cands), len(good), len(skipped), len(picked)))
+    print("[recheck] %s: 候选 %d, 可用 %d（深度测速剔除 %d 条「清单能拉/分片拉不动」）, "
+          "跳过(无v6环境) %d, 写入线路 %d"
+          % (key, len(cands), len(good), slow_killed, len(skipped), len(picked)))
+    for it in picked:
+        print("   · %7.1f KB/s  %s" % (it.get("speed_kbps") or 0, (it.get("url") or "")[:96]))
     return 0
 
 
@@ -464,6 +605,10 @@ def main():
     ap.add_argument("--timeout", type=float, default=8.0)
     ap.add_argument("--max-lines", dest="max_lines", type=int, default=3,
                     help="每个频道最多保留几条线路(电视端卡顿时会自动切换)")
+    ap.add_argument("--min-kbps", dest="min_kbps", type=float, default=HARD_MIN_KBPS,
+                    help="深度测速吞吐低于此值(KB/s)的线路判为不可用（默认 %(default)s）")
+    ap.add_argument("--no-deep", action="store_true",
+                    help="关闭深度测速（退回 v2.0「能建连即可用」口径，仅用于快速排查）")
     a = ap.parse_args()
     if a.recheck:
         sys.exit(recheck(a, a.recheck))
@@ -518,12 +663,33 @@ def main():
                 print("  探测进度 %d/%d" % (i, len(futs)), flush=True)
 
     good = [r for r in results if r.get("ok")]
+    # ---- 阶段 2：对「快速摸底通过」的线路做「真下载分片」吞吐测速 ----
+    # 阶段 1 只能证明「清单/首包能拿到」，证明不了「能持续播」。
+    # 实测教训：CCTV5+ 某线路 m3u8 545 B 秒回，分片却 0.1 KB/s / 超时 ——
+    # 电视端表现就是「播 3 秒画面不动、换线也全挂」。必须真下载才算数。
+    slow_killed = 0
+    if good and not a.no_deep:
+        t0 = time.time()
+        n_before = len(good)
+        with ThreadPoolExecutor(max_workers=a.workers) as ex:
+            for fu in as_completed([ex.submit(deep_verify, r, a.timeout, a.min_kbps)
+                                    for r in good]):
+                fu.result()
+        good = [r for r in results if r.get("ok")]
+        slow_killed = n_before - len(good)
+        spd = sorted((r.get("speed_kbps") or 0) for r in good)
+        med = spd[len(spd) // 2] if spd else 0
+        print("深度测速: %d 条通过摸底 -> %d 条真能播（剔除 %d 条「清单能拉/分片拉不动」），"
+              "实测吞吐中位数 %.0f KB/s，耗时 %.0fs"
+              % (n_before, len(good), slow_killed, med, time.time() - t0))
     # 本环境无 v6 出口时被跳过的线路：不算失败、不算 ok，但要保留进 playable.m3u
     skipped = [r for r in results if r.get("skip")]
     usable = good + skipped
     good.sort(key=lambda r: (r["group"], r["name"]))
     print("可用: %d / %d（另有 %d 条因本环境无 v6 出口跳过，保留待用户家里用）"
           % (len(good), len(results), len(skipped)))
+    if a.no_deep:
+        print("提示: --no-deep 已开启，本次沿用 v2.0「能建连即可用」口径（未做深度测速）")
 
     # ---- 多线路聚合：同一频道保留最快的 N 条线路（优先不同主机，避免同一挂全挂）----
     KIND_RANK = {"hls": 0, "ts": 1, "binary": 2}
@@ -611,6 +777,8 @@ def main():
                 f.write("#EXTVLCOPT:http-referrer=%s\n" % r["referer"])
             f.write(r["url"] + "\n")
 
+    spd_all = sorted((r.get("speed_kbps") or 0) for r in good)
+    speed_median = round(spd_all[len(spd_all) // 2], 1) if spd_all else 0.0
     bad_hosts = {}
     for r in results:
         if r.get("ok") or r.get("skip"):        # skip=本环境无 v6 出口，不是线路的错
@@ -628,6 +796,11 @@ def main():
             "skip_env_no_v6": len(skipped),
             "family_counts": dict(fam_cnt),
             "ok": len(good),
+            "deep": (not a.no_deep),
+            "min_kbps": a.min_kbps,
+            "good_kbps": GOOD_KBPS,
+            "slow_killed": slow_killed,
+            "speed_median_kbps": speed_median,
             "channels_unique": n_chan,
             "lines_kept": len(kept),
             "max_lines": a.max_lines,

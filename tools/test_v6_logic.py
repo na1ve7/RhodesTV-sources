@@ -68,6 +68,10 @@ class Net(object):
     def __call__(self, req, timeout=None, context=None):
         url = getattr(req, "full_url", req)
         self.calls.append(url)
+        # 模拟真实分片：深度测速阶段会真的下载 .ts 分片，这里给 256KB 假数据。
+        # （若返回几十字节的短响应，会被「测速门控」判成慢源，反而掩盖 v6 语义断言）
+        if url.split("?")[0].endswith(".ts"):
+            return FakeResp(b"\x47" * 262144)
         return FakeResp()
 
 
@@ -182,11 +186,56 @@ def test_C_end_to_end():
     print("      干跑输出目录:", tmp)
 
 
+# ------------------------------------------------- 深度测速门控(v2.1 新增)
+def test_D_speed_gate():
+    print("[D] 深度测速门控：真下载分片量吞吐，把「清单能拉/分片拉不动」的假可用源剔掉")
+    real = ts.measure_stream
+    try:
+        ts.measure_stream = lambda it, t, **k: (200.0, 2, "hls")        # 快源
+        r = ts.probe(item(V4), 2, v6_env=False)
+        ts.deep_verify(r, 2)
+        check("D1 快源保留并记录实测速率", r.get("ok") is True and r.get("speed_kbps") == 200.0,
+              (r.get("ok"), r.get("speed_kbps")))
+        check("D1b 速率达标线以上 -> 排序分档为优选", ts.speed_band(r) == 0, ts.speed_band(r))
+
+        ts.measure_stream = lambda it, t, **k: (5.0, 1, "hls")         # 慢源（清单能拉）
+        r2 = ts.probe(item(V4), 2, v6_env=False)
+        ts.deep_verify(r2, 2)
+        check("D2 慢源被判失败(不再伪装成可用)", r2.get("ok") is False and r2.get("status") == "slow",
+              r2.get("reason"))
+
+        ts.measure_stream = lambda it, t, **k: (999.0, 0, "seg_fail")  # 分片全拉不动
+        r3 = ts.probe(item(V4), 2, v6_env=False)
+        ts.deep_verify(r3, 2)
+        check("D3 一个分片都拉不到 -> 判失败", r3.get("ok") is False, r3.get("reason"))
+
+        ts.measure_stream = lambda it, t, **k: (60.0, 2, "hls")        # 够用但不到优选线
+        r4 = ts.probe(item(V4), 2, v6_env=False)
+        ts.deep_verify(r4, 2)
+        check("D4 够用源保留但排序分档低于优选", r4.get("ok") is True and ts.speed_band(r4) == 1,
+              (r4.get("ok"), ts.speed_band(r4)))
+    finally:
+        ts.measure_stream = real
+
+    # 真跑一遍 measure_stream（打桩 .ts 返回 256KB）：验证分片解析/速率计算链路
+    patch_net()
+    r5 = ts.probe(item(V4), 2, v6_env=False)
+    sp, segs, note = ts.measure_stream(r5, 2)
+    check("D5 真下载分片：速率>0 且 分片成功数=1", sp > 0 and segs == 1 and note == "hls",
+          (sp, segs, note))
+
+    r6 = ts.probe(item(V6), 2, v6_env=False)          # 无 v6 出口 -> skip
+    ts.deep_verify(r6, 2)
+    check("D6 无 v6 出口的 skip 线路不被测速判死", r6.get("skip") is True and r6.get("ok") is False
+          and "speed_kbps" not in r6, r6.get("status"))
+
+
 if __name__ == "__main__":
     print("=" * 72)
     test_A_no_v6_env()
     test_B_inject_v6_env()
     test_C_end_to_end()
+    test_D_speed_gate()
     print("=" * 72)
     if FAILED:
         print("FAILED %d: %s" % (len(FAILED), FAILED))
